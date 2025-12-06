@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1005589695326",
+    "project_id": "dyslexiaid-78b8d",
+    "storage_bucket": "dyslexiaid-78b8d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1005589695326:android:b47c6220a93599c061ddcf",
+        "android_client_info": {
+          "package_name": "org.example.frontend"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1005589695326-m16tm8r1i6otd1i3cb4k7aidlh72km0o.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlYud_Do90P_vnf14RI09BGcL1NBwG7sU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1005589695326-m16tm8r1i6otd1i3cb4k7aidlh72km0o.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
