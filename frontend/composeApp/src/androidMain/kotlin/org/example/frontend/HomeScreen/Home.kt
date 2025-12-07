@@ -86,7 +86,7 @@ fun HomeScreen() {
             .build()
 
         val request = Request.Builder()
-            .url("http://192.168.1.2:5000/predict")
+            .url("http://192.168.0.14:5000/predict")
             .post(requestBody)
             .build()
 
@@ -136,10 +136,10 @@ fun HomeScreen() {
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 paths.forEach { path ->
-                    drawPath(path = path, color = Color.Black, style = Stroke(15f))
+                    drawPath(path = path, color = Color.Black, style = Stroke(8f))
                 }
                 currentPath?.let {
-                    drawPath(path = it, color = Color.Black, style = Stroke(15f))
+                    drawPath(path = it, color = Color.Black, style = Stroke(8f))
                 }
             }
         }

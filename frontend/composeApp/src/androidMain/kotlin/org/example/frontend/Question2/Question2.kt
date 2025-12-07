@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.ContentScale
+import kotlinx.coroutines.delay
 
 
 data class Option(
@@ -70,8 +72,13 @@ fun Question2(onBack: () -> Unit) {
             option.copy(selected = (option.id == choice))
         }
     }
-
-
+    val selectedOption = questionOptions.firstOrNull { it.selected }
+    LaunchedEffect(selectedOption) {
+        if (selectedOption != null) {
+            delay(2000L) // 2 seconds
+//            onNextScreen()
+        }
+    }
         MaterialTheme {
                 Box(modifier=Modifier.fillMaxSize().background(Color.White)) {
                     Image(
@@ -153,7 +160,7 @@ fun Question2(onBack: () -> Unit) {
                                         .width(250.dp)
                                         .height(50.dp)
                                         .background(color = Color(0xFFFFFFFF), shape = RoundedCornerShape(size = 35.dp))
-                                        .padding(start = 10.dp, top = 10.dp, end = 10.dp, bottom = 10.dp).clickable(onClick = {selectOption(1)}),
+                                        .padding(start = 10.dp, top = 10.dp, end = 10.dp, bottom = 10.dp).clickable(enabled = selectedOption == null,onClick = {selectOption(1)}),
                                         verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
                                         horizontalAlignment = Alignment.CenterHorizontally){
                                         Text(
@@ -205,7 +212,7 @@ fun Question2(onBack: () -> Unit) {
                                         .width(250.dp)
                                         .height(50.dp)
                                         .background(color = Color(0xFFFFFFFF), shape = RoundedCornerShape(size = 35.dp))
-                                        .padding(start = 10.dp, top = 10.dp, end = 10.dp, bottom = 10.dp).clickable(onClick = {selectOption(2)}),
+                                        .padding(start = 10.dp, top = 10.dp, end = 10.dp, bottom = 10.dp).clickable(enabled = selectedOption == null,onClick = {selectOption(2)}),
                                         verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
                                         horizontalAlignment = Alignment.CenterHorizontally){
                                         Text(
@@ -257,7 +264,7 @@ fun Question2(onBack: () -> Unit) {
                                         .width(250.dp)
                                         .height(50.dp)
                                         .background(color = Color(0xFFFFFFFF), shape = RoundedCornerShape(size = 35.dp))
-                                        .padding(start = 10.dp, top = 10.dp, end = 10.dp, bottom = 10.dp).clickable(onClick = {selectOption(3)}),
+                                        .padding(start = 10.dp, top = 10.dp, end = 10.dp, bottom = 10.dp).clickable(enabled = selectedOption == null,onClick = {selectOption(3)}),
                                         verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
                                         horizontalAlignment = Alignment.CenterHorizontally){
                                         Text(
@@ -308,7 +315,7 @@ fun Question2(onBack: () -> Unit) {
                                         .width(250.dp)
                                         .height(50.dp)
                                         .background(color = Color(0xFFFFFFFF), shape = RoundedCornerShape(size = 35.dp))
-                                        .padding(start = 10.dp, top = 10.dp, end = 10.dp, bottom = 10.dp).clickable(onClick = {selectOption(4)}),
+                                        .padding(start = 10.dp, top = 10.dp, end = 10.dp, bottom = 10.dp).clickable(enabled = selectedOption == null,onClick = {selectOption(4)}),
                                         verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
                                         horizontalAlignment = Alignment.CenterHorizontally){
                                         Text(
@@ -364,7 +371,7 @@ fun Question2(onBack: () -> Unit) {
                                       .width(250.dp)
                                       .height(50.dp)
                                       .background(color = Color(0xFFFFFFFF), shape = RoundedCornerShape(size = 35.dp))
-                                      .padding(start = 10.dp, top = 10.dp, end = 10.dp, bottom = 10.dp).clickable(onClick = {selectOption(5)}),
+                                      .padding(start = 10.dp, top = 10.dp, end = 10.dp, bottom = 10.dp).clickable(enabled = selectedOption == null,onClick = {selectOption(5)}),
                                       verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
                                       horizontalAlignment = Alignment.CenterHorizontally){
                                       Text(

@@ -28,12 +28,18 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import android.util.Log
 @Composable
 fun SignUpScreen(onBack: () -> Unit,
-                 viewModel: SignUpViewModel=androidx.lifecycle.viewmodel.compose.viewModel()
+                 viewModel: SignUpViewModel=androidx.lifecycle.viewmodel.compose.viewModel(),
+                 onNextScreen: () -> Unit,
 ) {
     fun backpage(){
         onBack()
+    }
+    fun nextquestionpage()
+    {
+        onNextScreen()
     }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -263,8 +269,9 @@ fun SignUpScreen(onBack: () -> Unit,
                     if(email.isNotBlank() && password.isNotBlank() && confirmpass.isNotBlank() && password==confirmpass && isEmailValid)
 
                     {
-                        viewModel.Register(email,password, onSuccess = {
-                            backpage()
+                        viewModel.Register(email,password, onSuccess = {userId->
+                            Log.d("SignUpViewModel", "User registered with ID: $userId")
+                            nextquestionpage()
                         })
 
                     }
