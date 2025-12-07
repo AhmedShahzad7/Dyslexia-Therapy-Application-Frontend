@@ -12,9 +12,9 @@ import org.example.frontend.SignUpScreen.SignUpScreen
 import org.example.frontend.HomeScreen.HomeScreen
 import org.example.frontend.Question1.Question1
 import org.example.frontend.Question2.Question2
-
+import org.example.frontend.Question3.Question3
 @Composable
-fun AppNavGraph(startDestination: String = "LoginScreen") {
+fun AppNavGraph(startDestination: String = "Question3") {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = startDestination) {
