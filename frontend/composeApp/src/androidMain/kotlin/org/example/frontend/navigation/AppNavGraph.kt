@@ -10,8 +10,11 @@ import androidx.navigation.compose.rememberNavController
 import org.example.frontend.LoginScreen.LoginScreen
 import org.example.frontend.SignUpScreen.SignUpScreen
 import org.example.frontend.HomeScreen.HomeScreen
+import org.example.frontend.Question1.Question1
+import org.example.frontend.Question2.Question2
+
 @Composable
-fun AppNavGraph(startDestination: String = "LoginScreen") {
+fun AppNavGraph(startDestination: String = "HomeScreen") {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = startDestination) {
@@ -31,6 +34,12 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
         composable("HomeScreen") {
             HomeScreen()
         }
-        // add more composable routes as needed
+        composable("Question1") {
+            // pass navigation callback or navController to screen
+            Question1(onNextScreen = { navController.navigate("Question2") })
+        }
+        composable("Question2") {
+            Question2(onBack = { navController.popBackStack() })
+        }
     }
 }

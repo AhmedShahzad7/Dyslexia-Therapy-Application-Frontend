@@ -24,6 +24,7 @@ kotlin {
             implementation(libs.androidx.compose.ui.text)
             implementation("com.google.firebase:firebase-auth-ktx:22.1.1")
             implementation("com.google.firebase:firebase-firestore-ktx:24.7.1")
+            implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
 
         }
