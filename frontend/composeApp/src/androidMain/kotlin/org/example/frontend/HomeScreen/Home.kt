@@ -86,7 +86,7 @@ fun HomeScreen() {
             .build()
 
         val request = Request.Builder()
-            .url("http://192.168.0.14:5000/predict")
+            .url("http://192.168.10.108:5000/predict")
             .post(requestBody)
             .build()
 

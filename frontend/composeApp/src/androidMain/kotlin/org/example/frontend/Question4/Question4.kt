@@ -25,16 +25,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.example.frontend.R
 
 val DarkBlueQ4 = Color(0xFF000278)
 val WhiteQ4 = Color.White
 
 @Composable
-fun Question4(onBack: () -> Unit) {
-
+fun Question4(navController: NavHostController) {
+    val scope = rememberCoroutineScope()
     var childName by remember { mutableStateOf("") }
-
+    fun handleSelection() {
+        scope.launch {
+            delay(2000L)
+            navController.navigate("LoginScreen") {
+                popUpTo(0) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
     MaterialTheme {
         Box(
             modifier = Modifier
@@ -64,8 +76,42 @@ fun Question4(onBack: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
+//                Row(
+//                    modifier = Modifier.fillMaxWidth(),
+//                    verticalAlignment = Alignment.CenterVertically
+//                ) {
+//                    Box(
+//                        modifier = Modifier
+//                            .width(177.dp)
+//                            .height(22.dp)
+//                            .background(
+//                                brush = Brush.linearGradient(
+//                                    colorStops = arrayOf(
+//                                        1f to DarkBlueQ4,
+//                                        0.2f to WhiteQ4
+//                                    )
+//                                ),
+//                                shape = RoundedCornerShape(35.dp)
+//                            )
+//                            .border(1.dp, Color.Black, RoundedCornerShape(35.dp))
+//                    )
+//
+//                    Text(
+//                        text = "4/4",
+//                        color = DarkBlueQ4,
+//                        style = TextStyle(
+//                            fontSize = 24.sp,
+//                            fontFamily = FontFamily(Font(R.font.windsol)),
+//                            fontWeight = FontWeight.Bold,
+//                            fontStyle = FontStyle.Italic
+//                        )
+//                    )
+//                }
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(43.dp)
+                        .padding(horizontal = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -84,16 +130,18 @@ fun Question4(onBack: () -> Unit) {
                             .border(1.dp, Color.Black, RoundedCornerShape(35.dp))
                     )
 
-                    Spacer(modifier = Modifier.weight(1f))
-
                     Text(
+                        modifier = Modifier
+                            .width(50.dp)
+                            .height(23.dp)
+                            .padding(start = 12.dp),
                         text = "4/4",
-                        color = DarkBlueQ4,
                         style = TextStyle(
-                            fontSize = 24.sp,
+                            fontSize = 20.sp,
                             fontFamily = FontFamily(Font(R.font.windsol)),
-                            fontWeight = FontWeight.Bold,
-                            fontStyle = FontStyle.Italic
+                            fontWeight = FontWeight(400),
+                            color = Color(0xFF000278),
+                            textAlign = TextAlign.Center,
                         )
                     )
                 }
@@ -157,6 +205,10 @@ fun Question4(onBack: () -> Unit) {
                         .height(66.dp)
                         .clickable {
                             println("Continue clicked! Child Name: $childName")
+                            if(childName.isNotBlank())
+                            {
+                                handleSelection()
+                            }
                         }
                         .background(DarkBlueQ4, RoundedCornerShape(35.dp)),
                     contentAlignment = Alignment.Center

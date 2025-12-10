@@ -13,8 +13,9 @@ import org.example.frontend.HomeScreen.HomeScreen
 import org.example.frontend.Question1.Question1
 import org.example.frontend.Question2.Question2
 import org.example.frontend.Question3.Question3
+import org.example.frontend.Question4.Question4
 @Composable
-fun AppNavGraph(startDestination: String = "Question3") {
+fun AppNavGraph(startDestination: String = "LoginScreen") {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = startDestination) {
@@ -40,7 +41,13 @@ fun AppNavGraph(startDestination: String = "Question3") {
             Question1(onNextScreen = { navController.navigate("Question2") })
         }
         composable("Question2") {
-            Question2(onBack = { navController.popBackStack() })
+            Question2(onNextScreen = { navController.navigate("Question3") })
+        }
+        composable("Question3") {
+            Question3(onNextScreen = { navController.navigate("Question4") })
+        }
+        composable("Question4") {
+            Question4(navController=navController)
         }
     }
 }

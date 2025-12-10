@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.example.frontend.R
+import androidx.compose.ui.layout.ContentScale
 
 val DarkBlue = Color(0xFF000278)
 val White = Color.White
@@ -39,7 +41,7 @@ fun Question3(onNextScreen: () -> Unit) {
     fun handleSelection(gender: String) {
         selectedGender = gender
         scope.launch {
-            delay(200)
+            delay(2000L)
             onNextScreen()
         }
     }
@@ -100,16 +102,19 @@ fun Question3(onNextScreen: () -> Unit) {
                                 .border(1.dp, Color.Black, RoundedCornerShape(35.dp))
                         )
 
-                        Spacer(modifier = Modifier.weight(1f))
 
                         Text(
-                            text = "3/4",
-                            color = DarkBlue,
+                            modifier = Modifier
+                                .width(50.dp)
+                                .height(23.dp).padding(start =12.dp),
+
+                                    text = "3/4",
                             style = TextStyle(
-                                fontSize = 24.sp,
+                                fontSize = 20.sp,
                                 fontFamily = FontFamily(Font(R.font.windsol)),
-                                fontWeight = FontWeight.Bold,
-                                fontStyle = FontStyle.Italic
+                                fontWeight = FontWeight(400),
+                                color = Color(0xFF000278),
+                                textAlign = TextAlign.Center,
                             )
                         )
                     }
@@ -134,75 +139,78 @@ fun Question3(onNextScreen: () -> Unit) {
                     GenderButton(
                         text = "Girl",
                         isSelected = selectedGender == "Girl",
-                        onClick = { handleSelection("Girl") }
+                        enabled = selectedGender.isEmpty(),
+                        onClick = { handleSelection("Girl") } ,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                     GenderButton(
                         text = "Boy",
                         isSelected = selectedGender == "Boy",
-                        onClick = { handleSelection("Boy") }
+                        enabled = selectedGender.isEmpty(),
+                        onClick = { handleSelection("Boy") },
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+
                     )
                 }
             }
         }
     }
 }
+
 
 @Composable
 fun GenderButton(
     text: String,
     isSelected: Boolean,
-    onClick: () -> Unit
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val DarkBlue = Color(0xFF000278)
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
+        modifier = modifier
+            .width(250.dp)
             .height(50.dp)
-            .clickable { onClick() }
-            .background(
-                color = Color.White,
-                shape = RoundedCornerShape(30.dp)
-            )
+            .padding(vertical = 8.dp)
+            .background(Color.White, RoundedCornerShape(30.dp))
             .border(
-                width = 2.dp,
+                width = 5.dp,
                 color = if (isSelected) DarkBlue else Color.White,
                 shape = RoundedCornerShape(30.dp)
-            ),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = text,
-                color = DarkBlue,
-                fontSize = 22.sp,
-                fontFamily = FontFamily(Font(R.font.windsol)),
-                fontWeight = FontWeight.SemiBold
             )
+            .clickable(enabled = enabled) { onClick() }
+    ) {
 
+        // ✅ Centered text
+        Text(
+            text = text,
+            modifier = Modifier.align(Alignment.Center),
+            color = DarkBlue,
+            fontSize = 24.sp,
+            fontFamily = FontFamily(Font(R.font.windsol)),
+            textAlign = TextAlign.Center
+        )
 
-            if (isSelected) {
-                Box(
-                    modifier = Modifier
-                        .size(22.dp)
-                        .background(Color.White, RoundedCornerShape(50))
-                        .border(1.dp, DarkBlue, RoundedCornerShape(50)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_check),
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
+        // ✅ Rounded tick on right
+        if (isSelected) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 16.dp)
+                    .size(32.dp)
+                    .background(Color.White, RoundedCornerShape(50)) ,
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.checkvector),
+                    contentDescription = "selected",
+                    modifier = Modifier.size(18.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.None
+                )
             }
         }
     }
 }
+

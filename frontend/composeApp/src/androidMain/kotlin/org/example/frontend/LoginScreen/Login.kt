@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.material3.AlertDialog
 
 @Composable
 fun LoginScreen(onSignUpScreen: () -> Unit,onHomeScreen: () -> Unit,
@@ -44,6 +45,83 @@ fun LoginScreen(onSignUpScreen: () -> Unit,onHomeScreen: () -> Unit,
     }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var ShowForgotDialog by remember { mutableStateOf(false) }
+    var ForgotEmail by remember { mutableStateOf("") }
+    if(ShowForgotDialog)
+    {
+        AlertDialog(
+            onDismissRequest = { ShowForgotDialog = false },
+            title ={
+              Text(
+                  text = "Enter Email",
+                  style = TextStyle(
+                      fontSize = 18.sp,
+                      fontFamily = FontFamily(Font(R.font.windsol)),
+                      fontWeight = FontWeight(400),
+                      color = Color(0xFF000278),
+                  )
+
+              )
+            },
+            text={
+                OutlinedTextField(
+                    value=ForgotEmail,
+                    onValueChange = {ForgotEmail=it},
+//                    label = {Text("Email")},
+                    modifier = Modifier
+                        .width(253.dp).height(56.dp)
+                        .clip(RoundedCornerShape(35.dp))
+                        .background(color = Color(0xFFFFFFFF)),
+                    shape = RoundedCornerShape(size = 35.dp),
+                    textStyle = TextStyle(
+                        color = Color.Black,
+                        fontSize = 16.sp
+                    ),
+                )
+            },
+            confirmButton = {
+                Text(
+                    text = "Send",
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .clickable {
+                            val isForgotEmailValid = android.util.Patterns.EMAIL_ADDRESS.matcher(ForgotEmail).matches()
+                            if(ForgotEmail.isNotBlank() && isForgotEmailValid) {
+                                viewModel.Passwordreset(ForgotEmail, onSuccess = {
+                                    ShowForgotDialog = false
+                                    ForgotEmail = ""
+                                })
+
+                            }
+                        },
+                    style = TextStyle(
+                        fontSize = 18.sp,
+                        fontFamily = FontFamily(Font(R.font.windsol)),
+                        fontWeight = FontWeight(400),
+                        color = Color(0xFF000278),
+                    )
+                )
+            },
+            dismissButton = {
+                Text(
+                    text = "Cancel",
+                    modifier = Modifier
+                        .clickable {
+                            ShowForgotDialog = false
+                            ForgotEmail = ""
+                        }
+                        .padding(8.dp),
+                    color = Color.Gray,
+                    style = TextStyle(
+                        fontSize = 18.sp,
+                        fontFamily = FontFamily(Font(R.font.windsol)),
+                        fontWeight = FontWeight(400),)
+                )
+            }
+
+        )
+
+    }
     Box(
         modifier = Modifier.fillMaxSize().background(Color.White),
         contentAlignment = Alignment.Center
@@ -177,7 +255,7 @@ fun LoginScreen(onSignUpScreen: () -> Unit,onHomeScreen: () -> Unit,
 
             Text(
                 text = "Forgot Password?",
-                modifier = Modifier.width(165.dp).height(25.dp),
+                modifier = Modifier.width(165.dp).height(25.dp).clickable{ShowForgotDialog=true},
                 style = TextStyle(
                     fontSize = 18.sp,
                     fontFamily = FontFamily(Font(R.font.windsol)),

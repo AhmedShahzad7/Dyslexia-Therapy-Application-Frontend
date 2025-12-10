@@ -52,7 +52,7 @@ val DarkBlue = Color(0xFF000278)
 val White = Color(0xFFFFFFFF)
 
 @Composable
-fun Question2(onBack: () -> Unit) {
+fun Question2(onNextScreen:()->Unit) {
     var questionOptions by remember { mutableStateOf(listOf(
         Option(id = 1, text = "Never"),
         Option(id = 2, text = "Rarely"),
@@ -76,7 +76,7 @@ fun Question2(onBack: () -> Unit) {
     LaunchedEffect(selectedOption) {
         if (selectedOption != null) {
             delay(2000L) // 2 seconds
-//            onNextScreen()
+            onNextScreen()
         }
     }
         MaterialTheme {

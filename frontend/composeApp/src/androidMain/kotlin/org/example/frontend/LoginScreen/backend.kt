@@ -14,4 +14,13 @@ class LoginViewModel : ViewModel() {
 
             }
     }
+    fun Passwordreset(ForgotEmail: String,onSuccess: () -> Unit){
+
+        FirebaseAuth.getInstance().sendPasswordResetEmail(ForgotEmail)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    onSuccess()
+                }
+            }
+    }
 }
