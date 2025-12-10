@@ -1,4 +1,5 @@
 package org.example.frontend.LoginScreen
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -18,6 +19,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import org.example.frontend.R
 import androidx.compose.ui.unit.dp
@@ -30,7 +32,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.material3.AlertDialog
-
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.CustomCredential
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.launch
 @Composable
 fun LoginScreen(onSignUpScreen: () -> Unit,onHomeScreen: () -> Unit,
                 viewModel: LoginViewModel=androidx.lifecycle.viewmodel.compose.viewModel()
@@ -47,6 +54,55 @@ fun LoginScreen(onSignUpScreen: () -> Unit,onHomeScreen: () -> Unit,
     var password by remember { mutableStateOf("") }
     var ShowForgotDialog by remember { mutableStateOf(false) }
     var ForgotEmail by remember { mutableStateOf("") }
+
+    //GOOGLE INTEGRATON
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val credentialManager = CredentialManager.create(context)
+    val WEB_CLIENT_ID = "1005589695326-btuk75uk4i67ilevqot6alkft62lfgpm.apps.googleusercontent.com"
+
+    // 2. GOOGLE SIGN IN FUNCTION
+    fun handleGoogleLogin() {
+        coroutineScope.launch {
+            try {
+                val googleIdOption = GetGoogleIdOption.Builder()
+                    .setFilterByAuthorizedAccounts(true)
+                    .setServerClientId(WEB_CLIENT_ID)
+                    .setAutoSelectEnabled(false)
+                    .build()
+
+                val request = GetCredentialRequest.Builder()
+                    .addCredentialOption(googleIdOption)
+                    .build()
+
+                val result = credentialManager.getCredential(
+                    request = request,
+                    context = context
+                )
+                val credential = result.credential
+                if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                    val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                    val googleIdToken = googleIdTokenCredential.idToken
+
+                    viewModel.signInWithGoogle(
+                        idToken = googleIdToken,
+                        onSuccess = {
+                            Log.d("LoginScreen", "Google Login Success")
+                            navigatetohome()
+                        },
+                        onError = { e ->
+                            Log.e("LoginScreen", "Google Login Error: ${e.message}")
+                        }
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("LoginScreen", "Google Sign-In Cancelled/Failed: ${e.message}")
+            }
+        }
+    }
+
+
+
     if(ShowForgotDialog)
     {
         AlertDialog(
@@ -275,6 +331,8 @@ fun LoginScreen(onSignUpScreen: () -> Unit,onHomeScreen: () -> Unit,
                     textAlign = TextAlign.Center,
                 )
             )
+
+            //LOGIN WITH GOOGLE
             Row(
                 horizontalArrangement = Arrangement.spacedBy(0.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
@@ -285,6 +343,7 @@ fun LoginScreen(onSignUpScreen: () -> Unit,onHomeScreen: () -> Unit,
                     .background(color = Color(0x00FFFFFF), shape = RoundedCornerShape(35.dp))
 //                    .padding(start = 10.dp, top = 10.dp, end = 10.dp, bottom = 10.dp)
                     .padding(horizontal = 10.dp)
+                    .clickable { handleGoogleLogin() }
             ) {
                 Text(
                     text = "Login with Google",

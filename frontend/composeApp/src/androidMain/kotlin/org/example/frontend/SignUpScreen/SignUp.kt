@@ -29,6 +29,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import android.util.Log
+import androidx.compose.ui.platform.LocalContext
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.CustomCredential
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 @Composable
 fun SignUpScreen(onBack: () -> Unit,
                  viewModel: SignUpViewModel=androidx.lifecycle.viewmodel.compose.viewModel(),
@@ -44,6 +53,58 @@ fun SignUpScreen(onBack: () -> Unit,
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmpass by remember { mutableStateOf("") }
+
+
+
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val WEB_CLIENT_ID = "1005589695326-btuk75uk4i67ilevqot6alkft62lfgpm.apps.googleusercontent.com"
+    val credentialManager = CredentialManager.create(context)
+
+    // --- GOOGLE SIGN IN Function
+    fun handleGoogleSignIn() {
+        coroutineScope.launch {
+            try {
+                val googleIdOption = GetGoogleIdOption.Builder()
+                    .setFilterByAuthorizedAccounts(false)
+                    .setServerClientId(WEB_CLIENT_ID)
+                    .setAutoSelectEnabled(false)
+                    .build()
+                val request = GetCredentialRequest.Builder()
+                    .addCredentialOption(googleIdOption)
+                    .build()
+                val result = credentialManager.getCredential(
+                    request = request,
+                    context = context
+                )
+                val credential = result.credential
+                if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                    val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                    val googleIdToken = googleIdTokenCredential.idToken
+
+                    // 5. Send to ViewModel
+                    viewModel.signInWithGoogle(
+                        idToken = googleIdToken,
+                        onSuccess = { userId ->
+                            Log.d("GoogleSignIn", "Success: $userId")
+                            nextquestionpage() // Navigate to next screen
+                        },
+                        onError = { e ->
+                            Log.e("GoogleSignIn", "Firebase Error: ${e.message}")
+                        }
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("GoogleSignIn", "Cancelled or Failed: ${e.message}")
+            }
+        }
+    }
+
+
+
+
+
+
 
     Box(
         modifier = Modifier.fillMaxSize().background(Color.White),
@@ -232,6 +293,7 @@ fun SignUpScreen(onBack: () -> Unit,
                     textAlign = TextAlign.Center,
                 )
             )
+            //SIGNUP WITH GOOGLE OR LOGIN
             Row(
                 horizontalArrangement = Arrangement.spacedBy(0.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
@@ -241,7 +303,9 @@ fun SignUpScreen(onBack: () -> Unit,
                     .height(44.dp)
                     .background(color = Color(0x00FFFFFF), shape = RoundedCornerShape(35.dp))
 //                    .padding(start = 10.dp, top = 10.dp, end = 10.dp, bottom = 10.dp)
-                    .padding(horizontal = 10.dp)
+                    .padding(horizontal = 10.dp).clickable {
+                        handleGoogleSignIn()
+                    }
             ) {
                 Text(
                     text = "Signup with Google",
