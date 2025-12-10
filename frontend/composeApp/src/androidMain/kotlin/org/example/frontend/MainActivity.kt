@@ -6,15 +6,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.google.firebase.FirebaseApp
-import org.example.frontend.HomeScreen.HomeScreen
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         FirebaseApp.initializeApp(this)
         setContent {
-            HomeScreen()
-//            App()
+            App()
         }
     }
 }
@@ -22,6 +20,5 @@ class MainActivity : ComponentActivity() {
 @Preview
 @Composable
 fun AppAndroidPreview() {
-    HomeScreen()
-//    App()
+    App()
 }
