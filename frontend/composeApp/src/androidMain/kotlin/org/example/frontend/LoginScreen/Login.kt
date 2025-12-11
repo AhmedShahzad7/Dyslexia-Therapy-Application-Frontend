@@ -66,7 +66,7 @@ fun LoginScreen(onSignUpScreen: () -> Unit,onHomeScreen: () -> Unit,
         coroutineScope.launch {
             try {
                 val googleIdOption = GetGoogleIdOption.Builder()
-                    .setFilterByAuthorizedAccounts(true)
+                    .setFilterByAuthorizedAccounts(false)
                     .setServerClientId(WEB_CLIENT_ID)
                     .setAutoSelectEnabled(false)
                     .build()
