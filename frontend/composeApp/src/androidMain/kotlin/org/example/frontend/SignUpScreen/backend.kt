@@ -23,8 +23,15 @@ class SignUpViewModel : ViewModel() {
         auth.signInWithCredential(credential)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    val userId = task.result?.user?.uid
-                    onSuccess(userId)
+                    val result = task.result
+                    val isNewUser = result?.additionalUserInfo?.isNewUser == true
+                    if (isNewUser) {
+                        val userId = result?.user?.uid
+                        onSuccess(userId)
+                    } else {
+                        auth.signOut()
+                        onError(Exception("Account already exists. Please go to Login."))
+                    }
                 } else {
                     onError(task.exception ?: Exception("Unknown error"))
                 }

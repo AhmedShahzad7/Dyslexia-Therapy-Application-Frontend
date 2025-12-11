@@ -33,7 +33,18 @@ class LoginViewModel : ViewModel() {
         auth.signInWithCredential(credential)
             .addOnCompleteListener { task: Task<AuthResult> ->
                 if (task.isSuccessful) {
-                    onSuccess()
+                    val result = task.result
+                    val user = auth.currentUser
+                    val isNewUser = result?.additionalUserInfo?.isNewUser == true
+                    if (isNewUser) {
+                        user?.delete()
+                            ?.addOnCompleteListener {
+                                onError(Exception("No account found. Please Register first."))
+                            }
+                        auth.signOut()
+                    } else {
+                        onSuccess()
+                    }
                 } else {
                     onError(task.exception ?: Exception("Unknown error"))
                 }
