@@ -66,6 +66,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.IconButton
 import coil.decode.GifDecoder
 import android.graphics.Bitmap
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.LaunchedEffect
 
 // --- FIX: Made these private to avoid conflict with Question4 ---
@@ -290,6 +291,35 @@ fun Question5() {
                                         ) { checkAnswer(false) }
                                 )
                             }
+                        }
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // 2. Row aligns button to the Right
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(end = 20.dp, bottom = 10.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .background(Color(0xFF27B51A), RoundedCornerShape(20.dp))
+                                .clickable {
+                                    // Navigate to Home or Result Screen
+               //                     navController.navigate("HomeScreen")
+                                }
+                                .padding(horizontal = 40.dp, vertical = 15.dp)
+                        ) {
+                            Text(
+                                text = "Next",
+                                style = TextStyle(
+                                    fontSize = 26.sp,
+                                    fontFamily = FontFamily(Font(R.font.windsol)),
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            )
                         }
                     }
                 }

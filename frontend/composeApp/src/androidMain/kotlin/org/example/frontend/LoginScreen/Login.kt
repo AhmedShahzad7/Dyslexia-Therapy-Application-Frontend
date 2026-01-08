@@ -35,20 +35,28 @@ import androidx.compose.material3.AlertDialog
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.CustomCredential
+import androidx.navigation.NavHostController
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 @Composable
-fun LoginScreen(onSignUpScreen: () -> Unit,onHomeScreen: () -> Unit,
+fun LoginScreen(onSignUpScreen: () -> Unit,navController: NavHostController,
                 viewModel: LoginViewModel=androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     fun navigatetosignup()
     {
         onSignUpScreen()
     }
-    fun navigatetohome()
-    {
-        onHomeScreen()
+    val scope = rememberCoroutineScope()
+    fun OnNextScreen() {
+        scope.launch {
+            delay(2000L)
+            navController.navigate("Alvl1Q1") {
+                popUpTo(0) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
     }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -88,7 +96,7 @@ fun LoginScreen(onSignUpScreen: () -> Unit,onHomeScreen: () -> Unit,
                         idToken = googleIdToken,
                         onSuccess = {
                             Log.d("LoginScreen", "Google Login Success")
-                            navigatetohome()
+                            OnNextScreen()
                         },
                         onError = { e ->
                             Log.e("LoginScreen", "Google Login Error: ${e.message}")
@@ -372,7 +380,7 @@ fun LoginScreen(onSignUpScreen: () -> Unit,onHomeScreen: () -> Unit,
 
                     {
                         viewModel.login(email,password, onSuccess = {
-                            navigatetohome()
+                            OnNextScreen()
                         })
 
                     }

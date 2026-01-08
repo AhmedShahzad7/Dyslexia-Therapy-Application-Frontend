@@ -80,7 +80,7 @@ val SelectedBlue = Color(0xFF0099FF)
 enum class Direction { UP, DOWN, LEFT, RIGHT }
 
 @Composable
-fun Question4() {
+fun Question4(onNextScreen: () -> Unit) {
 
     // --- STATE VARIABLES ---
     // Variable to change what the popup says
@@ -387,8 +387,45 @@ fun Question4() {
                             )
                         }
                     }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(end = 20.dp, top = 50.dp), // Right padding inside the card
+                        horizontalArrangement = Arrangement.End // <--- This forces the button to the right
+                    ){
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 10.dp, bottom = 10.dp) // Add spacing from the edges
+                            .background(Color(0xFF27B51A), RoundedCornerShape(15.dp)) // Green bg
+                            .clickable {
+//                        // 1. Convert drawing to bitmap
+//                        val bitmap = createBitmapFromPaths(paths, boxSizePx, boxSizePx)
+//                        val byteArray = bitmapToByteArray(bitmap)
+//
+//                        // 2. Send to Flask API
+//                        sendImageToFlask(byteArray) { result ->
+//                            Log.d("API_RESULT", result)
+//                        }
+
+                                // 3. Navigate to next screen
+                        onNextScreen()
+                            }
+                            .padding(horizontal = 20.dp, vertical = 5.dp) // Padding inside the button
+                    ) {
+                        Text(
+                            text = "Next",
+                            style = TextStyle(
+                                fontSize = 26.sp,
+                                fontFamily = FontFamily(Font(R.font.windsol)),
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        )
+                    }
+                        }
                 }
             }
+
 
             // --- POPUP LOGIC ---
             if (overlay_boolean.value) {
@@ -452,6 +489,7 @@ fun Question4() {
 
                 }
             }
+
         }
         }
 }

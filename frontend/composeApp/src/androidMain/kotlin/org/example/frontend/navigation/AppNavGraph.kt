@@ -22,17 +22,17 @@ import org.example.frontend.AssesmentTest.Level1.Question4 as Alvl1Q4
 import org.example.frontend.AssesmentTest.Level1.Question5 as Alvl1Q5
 
 @Composable
-fun AppNavGraph(startDestination: String = "Alvl1Q5") {
+fun AppNavGraph(startDestination: String = "LoginScreen") {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = startDestination) {
         composable("LoginScreen") {
             // pass navigation callback or navController to screen
             LoginScreen(
-                onSignUpScreen = { navController.navigate("SignUpScreen") },
-                onHomeScreen={navController.navigate("HomeScreen")},
+                navController = navController,onSignUpScreen = { navController.navigate("SignUpScreen") }
+                )
 
-            )
+
         }
         composable("SignUpScreen") {
             SignUpScreen(
@@ -53,17 +53,29 @@ fun AppNavGraph(startDestination: String = "Alvl1Q5") {
         composable("Question3") {
             Question3(onNextScreen = { navController.navigate("Question4") })
         }
+        composable("Question4") {
+            // Assuming Question4 handles navigation to the Assessment or Home next
+
+            Question4(navController = navController)
+        }
         composable("Alvl1Q1") {
-            Alvl1Q1()
+            Alvl1Q1(onNextScreen = { navController.navigate("Alvl1Q2") }
+            )
         }
         composable("Alvl1Q2") {
-            Alvl1Q2()
+            Alvl1Q2(
+                onNextScreen = { navController.navigate("Alvl1Q3") }
+            )
         }
         composable("Alvl1Q3") {
-            Alvl1Q3()
+            Alvl1Q3(
+                onNextScreen = { navController.navigate("Alvl1Q4") }
+            )
         }
         composable("Alvl1Q4") {
-            Alvl1Q4()
+            Alvl1Q4(
+                onNextScreen = { navController.navigate("Alvl1Q5") }
+            )
         }
         composable("Alvl1Q5") {
             Alvl1Q5()

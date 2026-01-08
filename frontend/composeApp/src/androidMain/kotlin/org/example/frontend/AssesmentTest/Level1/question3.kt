@@ -84,7 +84,7 @@ import okio.IOException
 
 
 @Composable
-fun Question3(){
+fun Question3(onNextScreen: () -> Unit){
     val context = LocalContext.current
     val overlay_boolean= remember { mutableStateOf(false) }
     val speaker_boolean = remember { mutableStateOf(false) }
@@ -198,7 +198,7 @@ fun Question3(){
         Box(
             modifier=Modifier
                 .width(299.dp)
-                .height(497.dp)
+                .height(550.dp)
                 .background(color = Color(0xC7FFFFFF), shape = RoundedCornerShape(size = 35.dp))
                 .align(Alignment.Center)
         ){
@@ -330,6 +330,36 @@ fun Question3(){
 
 
             }//END OF MIDDLE BOX
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd) // Position at Bottom Right of the Blur Box
+                    .padding(end = 10.dp, bottom = 10.dp) // Add spacing from the edges
+                    .background(Color(0xFF27B51A), RoundedCornerShape(15.dp)) // Green bg
+                    .clickable {
+//                        // 1. Convert drawing to bitmap
+//                        val bitmap = createBitmapFromPaths(paths, boxSizePx, boxSizePx)
+//                        val byteArray = bitmapToByteArray(bitmap)
+//
+//                        // 2. Send to Flask API
+//                        sendImageToFlask(byteArray) { result ->
+//                            Log.d("API_RESULT", result)
+//                        }
+
+                        // 3. Navigate to next screen
+                        onNextScreen()
+                    }
+                    .padding(horizontal = 20.dp, vertical = 5.dp) // Padding inside the button
+            ) {
+                Text(
+                    text = "Next",
+                    style = TextStyle(
+                        fontSize = 26.sp,
+                        fontFamily = FontFamily(Font(R.font.windsol)),
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                )
+            }
         } //END OF ORIGINAL SCREEN
 
 
