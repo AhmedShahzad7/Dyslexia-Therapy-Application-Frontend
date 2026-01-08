@@ -1,5 +1,6 @@
 package org.example.frontend.HomeScreen
 
+import WaterSoundPlayer
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.foundation.Canvas
@@ -7,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -38,15 +40,39 @@ import okhttp3.Callback
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okio.IOException
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.DisposableEffect
+
+import androidx.compose.ui.graphics.PathEffect
+import lettersViewModelCapital
+import lettersViewModelSmall
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    viewModelCapital: lettersViewModelCapital=androidx.lifecycle.viewmodel.compose.viewModel(),
+    viewModelSmall: lettersViewModelSmall=androidx.lifecycle.viewmodel.compose.viewModel(),
+    ) {
+    val context = LocalContext.current
+    val waterSound = remember { WaterSoundPlayer(context) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            waterSound.release()
+        }
+    }
     val paths = remember { mutableStateListOf<Path>() }
     var currentPath by remember { mutableStateOf<Path?>(null) }
     val density = LocalDensity.current
     val targetPixels = 64
-    val boxSizeDp =60.dp
+    val boxSizeDp =64.dp
     val boxSizePx = with(density) { targetPixels.dp.toPx().toInt() }
+
+
+
+
+
+
+
 
     fun createBitmapFromPaths(paths: List<Path>, width: Int, height: Int): Bitmap {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -86,7 +112,7 @@ fun HomeScreen() {
             .build()
 
         val request = Request.Builder()
-            .url("http://192.168.10.108:5000/predict")
+            .url("http://192.168.0.11:5000/predict")
             .post(requestBody)
             .build()
 
@@ -109,6 +135,25 @@ fun HomeScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
     ) {
+//        Box(
+//            modifier = Modifier
+//                .size(boxSizeDp)
+//                .background(Color.White)
+//                .clipToBounds()
+//        ) {
+//            Canvas(modifier = Modifier.fillMaxSize()) {
+//                drawDottedLetterA()
+//                paths.forEach { path ->
+//                    drawPath(path = path, color = Color.Black, style = Stroke(8f))
+//                }
+//                currentPath?.let {
+//                    drawPath(path = it, color = Color.Black, style = Stroke(8f))
+//                }
+//            }
+//        }
+//        Spacer(modifier = Modifier.padding(8.dp))
+
+
         Box(
             modifier = Modifier
                 .size(boxSizeDp) // Use the variable
@@ -117,6 +162,7 @@ fun HomeScreen() {
                 .pointerInput(Unit) {
                     detectDragGestures(
                         onDragStart = { offset ->
+                            waterSound.start()
                             val newPath = Path().apply { moveTo(offset.x, offset.y) }
                             currentPath = newPath
                         },
@@ -128,13 +174,24 @@ fun HomeScreen() {
                             }
                         },
                         onDragEnd = {
+                            waterSound.stop()
                             currentPath?.let { paths.add(it) }
                             currentPath = null
+                        },
+                        onDragCancel = {
+                            waterSound.stop()
                         }
                     )
                 }
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
+//                with(viewModelCapital) {
+//                    drawDottedLetterG()
+//                }
+                with (viewModelSmall){
+                    drawDottedLetterq()
+                }
+
                 paths.forEach { path ->
                     drawPath(path = path, color = Color.Black, style = Stroke(8f))
                 }
@@ -156,6 +213,14 @@ fun HomeScreen() {
             modifier = Modifier.padding(top = 16.dp)
         ) {
             Text("Predict")
+        }
+        Button(
+            onClick = {
+                paths.clear()
+                currentPath = null
+            }
+        ) {
+            Text("Reset")
         }
     }
 }
