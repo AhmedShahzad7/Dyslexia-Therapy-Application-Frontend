@@ -14,8 +14,15 @@ import org.example.frontend.Question1.Question1
 import org.example.frontend.Question2.Question2
 import org.example.frontend.Question3.Question3
 import org.example.frontend.Question4.Question4
+
+import org.example.frontend.AssesmentTest.Level1.Question1 as Alvl1Q1
+import org.example.frontend.AssesmentTest.Level1.Question2 as Alvl1Q2
+import org.example.frontend.AssesmentTest.Level1.Question3 as Alvl1Q3
+import org.example.frontend.AssesmentTest.Level1.Question4 as Alvl1Q4
+import org.example.frontend.AssesmentTest.Level1.Question5 as Alvl1Q5
+
 @Composable
-fun AppNavGraph(startDestination: String = "LoginScreen") {
+fun AppNavGraph(startDestination: String = "Alvl1Q5") {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = startDestination) {
@@ -46,8 +53,20 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
         composable("Question3") {
             Question3(onNextScreen = { navController.navigate("Question4") })
         }
-        composable("Question4") {
-            Question4(navController=navController)
+        composable("Alvl1Q1") {
+            Alvl1Q1()
+        }
+        composable("Alvl1Q2") {
+            Alvl1Q2()
+        }
+        composable("Alvl1Q3") {
+            Alvl1Q3()
+        }
+        composable("Alvl1Q4") {
+            Alvl1Q4()
+        }
+        composable("Alvl1Q5") {
+            Alvl1Q5()
         }
     }
 }

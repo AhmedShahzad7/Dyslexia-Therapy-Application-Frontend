@@ -304,6 +304,7 @@ fun Question1(){
 
         //GREY OVERLAY HANDLED BY IF STATEMENT
         if(overlay_boolean.value){
+
             Box(
                 modifier=Modifier
                     .offset(x = 0.dp, y = 0.dp)
@@ -314,6 +315,7 @@ fun Question1(){
 
             ){
                 //Speech Bubble Location
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -321,6 +323,7 @@ fun Question1(){
 
                 ) {
                 // --- SPEECH BUBBLE (Center Right) ---
+
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -343,6 +346,7 @@ fun Question1(){
                         )
                     }
                     // --- DORAEMON (Bottom Left) ---
+
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(R.drawable.doraemon)
@@ -357,7 +361,8 @@ fun Question1(){
                             .align(Alignment.BottomStart)
                     )
                 }
-            }
+
+            } //END OF GREY OVERLEY
 
 
         }
