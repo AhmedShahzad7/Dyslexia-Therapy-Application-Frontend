@@ -28,8 +28,8 @@ kotlin {
             implementation(libs.androidx.credentials)
             implementation(libs.androidx.credentials.play.services.auth)
             implementation(libs.googleid)
-
-
+            implementation("io.coil-kt:coil-compose:2.5.0")
+            implementation("io.coil-kt:coil-gif:2.5.0")
         }
         commonMain.dependencies {
             implementation(compose.runtime)
