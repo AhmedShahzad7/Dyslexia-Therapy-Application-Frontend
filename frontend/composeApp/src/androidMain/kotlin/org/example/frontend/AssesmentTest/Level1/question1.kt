@@ -196,7 +196,7 @@ fun Question1(onNextScreen: () -> Unit){
         modifier=Modifier.fillMaxSize(),
     ){
         Image(
-            painter=painterResource(R.drawable.assessment_level1),
+            painter=painterResource(R.drawable.assessmenttestquestion1),
             contentDescription = "",
             contentScale = ContentScale.FillBounds,
             modifier = Modifier.fillMaxSize()
