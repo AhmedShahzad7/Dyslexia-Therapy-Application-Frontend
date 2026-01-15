@@ -19,8 +19,8 @@
                         <option name="values">
                           <map>
                             <entry key="assetSourceType" value="FILE" />
-                            <entry key="outputName" value="southeast_arrow" />
-                            <entry key="sourceFile" value="E:\University Files\BachelorsCSR\Semester 7\FYP\SouthEast Arrow.svg" />
+                            <entry key="outputName" value="pause_btn" />
+                            <entry key="sourceFile" value="E:\University Files\BachelorsCSR\Semester 7\FYP\SVGs\pause_btn.svg" />
                           </map>
                         </option>
                       </PersistentState>
