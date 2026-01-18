@@ -69,7 +69,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import android.media.MediaPlayer
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.ui.draw.shadow
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -81,13 +85,18 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okio.IOException
 
-
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun Question3(onNextScreen: () -> Unit){
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val overlay_boolean= remember { mutableStateOf(false) }
     val speaker_boolean = remember { mutableStateOf(false) }
+    var buttonColor1 by remember { mutableStateOf(Color(0xFFFFFFFF)) }
+    var buttonColor2 by remember { mutableStateOf(Color(0xFFFFFFFF)) }
     //GIPHY HANDLER
     val imageLoader = remember {
         ImageLoader.Builder(context)
@@ -100,66 +109,38 @@ fun Question3(onNextScreen: () -> Unit){
             }
             .build()
     }
-    //CANVA HANDLE
-    val paths = remember { mutableStateListOf<Path>() }
-    var currentPath by remember { mutableStateOf<Path?>(null) }
-    val density = LocalDensity.current
-    val targetPixels = 250
-    val boxSizeDp =250.dp
-    val boxSizePx = with(density) { targetPixels.dp.toPx().toInt() }
 
-    fun createBitmapFromPaths(paths: List<Path>, width: Int, height: Int): Bitmap {
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = android.graphics.Canvas(bitmap)
-        canvas.drawColor(android.graphics.Color.WHITE)
-        val paint = android.graphics.Paint().apply {
-            color = android.graphics.Color.BLACK
-            style = android.graphics.Paint.Style.STROKE
-            strokeWidth = 10f // Thicker lines show up better after resizing
-            isAntiAlias = true
-            strokeJoin = android.graphics.Paint.Join.ROUND
-            strokeCap = android.graphics.Paint.Cap.ROUND
-        }
-
-        paths.forEach { composePath ->
-            canvas.drawPath(composePath.asAndroidPath(), paint)
-        }
-
-        return bitmap
-    }
-
-    fun bitmapToByteArray(bitmap: Bitmap): ByteArray {
-        val stream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-        return stream.toByteArray()
-    }
-
-    fun sendImageToFlask(byteArray: ByteArray, onResult: (String) -> Unit) {
+    //FLASK HANDLE
+    val question_number="3"
+    val ip_address="http://192.168.1.2:5000"
+    fun sendDirectionToFlask(userid:String,arrow_selected:String ,onResult: (String) -> Unit) {
         val client = OkHttpClient()
         val requestBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
-            .addFormDataPart(
-                "file",
-                "image.png",
-                byteArray.toRequestBody("image/png".toMediaTypeOrNull())
-            )
+            .addFormDataPart("user_id", userid)
+            .addFormDataPart("question_number", question_number)
+            .addFormDataPart("arrow_selected", arrow_selected)
             .build()
 
         val request = Request.Builder()
-            .url("http://192.168.10.108:5000/predict")
+            .url(ip_address+"/predict_direction_mcq")
             .post(requestBody)
             .build()
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Log.e("FlaskAPI", "Error! ${e.message}", e)
-                onResult("Error: ${e.message}")
+                Handler(Looper.getMainLooper()).post {
+                    onResult("Error: ${e.message}")
+                }
             }
 
             override fun onResponse(call: Call, response: Response) {
                 val result = response.body?.string() ?: "No response"
                 Log.d("FlaskAPI", "Response: $result")
-                onResult(result)
+                Handler(Looper.getMainLooper()).post {
+                    onResult(result)
+                }
             }
         })
     }
@@ -279,14 +260,29 @@ fun Question3(onNextScreen: () -> Unit){
 
                 Column(
                     verticalArrangement = Arrangement.spacedBy(20.dp),
-
-
                     ){
+                    //DOWN
                     Row(
                         modifier = Modifier
                             .width(150.dp)
                             .height(50.dp)
-                            .background(color = Color(0xFFFFFFFF), shape = RoundedCornerShape(size = 35.dp)),
+                            .background(color = Color(0xFFFFFFFF), shape = RoundedCornerShape(size = 35.dp))
+                            .border(width = 5.dp, color = buttonColor1,shape = RoundedCornerShape(size = 35.dp))
+                            .clickable {
+                                buttonColor1 = Color(0xFF27B51A)
+
+                                scope.launch {
+                                    delay(500)
+                                    val currentUser = FirebaseAuth.getInstance().currentUser
+                                    if (currentUser != null) {
+                                        val userId = currentUser.uid
+                                        sendDirectionToFlask(userId, "Down") { result ->
+                                            onNextScreen()
+                                        }
+                                    }
+                                }
+                            }
+                        ,
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -302,13 +298,29 @@ fun Question3(onNextScreen: () -> Unit){
                         )
                     }
 
-
+                    //UP
                     Row(
                         modifier = Modifier
                             .width(150.dp)
                             .height(50.dp)
                             .background(color = Color(0xFFFFFFFF), shape = RoundedCornerShape(size = 35.dp))
-                            .padding(start = 10.dp, top = 10.dp, bottom = 10.dp),
+                            .border(width = 5.dp, color = buttonColor2,shape = RoundedCornerShape(size = 35.dp))
+                            .padding(start = 10.dp, top = 10.dp, bottom = 10.dp)
+                            .clickable {
+                                buttonColor2 = Color(0xFF27B51A)
+
+                                scope.launch {
+                                    delay(500)
+                                    val currentUser = FirebaseAuth.getInstance().currentUser
+                                    if (currentUser != null) {
+                                        val userId = currentUser.uid
+                                        sendDirectionToFlask(userId, "Up") { result ->
+                                            onNextScreen()
+                                        }
+                                    }
+                                }
+                            }
+                        ,
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {

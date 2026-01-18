@@ -73,6 +73,7 @@ import android.media.MediaPlayer
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.NavHostController
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -84,6 +85,10 @@ import okhttp3.Callback
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okio.IOException
+
+import android.os.Handler
+import android.os.Looper
+
 @Composable
 fun Question1(onNextScreen: () -> Unit){
     val context = LocalContext.current
@@ -143,7 +148,7 @@ fun Question1(onNextScreen: () -> Unit){
         return stream.toByteArray()
     }
 
-    fun sendImageToFlask(byteArray: ByteArray, onResult: (String) -> Unit) {
+    fun sendImageToFlask(userid:String,byteArray: ByteArray, onResult: (String) -> Unit) {
         val client = OkHttpClient()
         val requestBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
@@ -152,23 +157,31 @@ fun Question1(onNextScreen: () -> Unit){
                 "image.png",
                 byteArray.toRequestBody("image/png".toMediaTypeOrNull())
             )
+
+            .addFormDataPart("user_id", userid)
             .build()
 
         val request = Request.Builder()
-            .url("http://192.168.10.108:5000/predict")
+            .url("http://192.168.1.2:5000/predict_direction")
             .post(requestBody)
             .build()
 
+        // FOR NEXT PAGE FIX CHECK FUNCTION
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Log.e("FlaskAPI", "Error! ${e.message}", e)
-                onResult("Error: ${e.message}")
+                Handler(Looper.getMainLooper()).post {
+                    onResult("Error: ${e.message}")
+                }
             }
 
             override fun onResponse(call: Call, response: Response) {
                 val result = response.body?.string() ?: "No response"
                 Log.d("FlaskAPI", "Response: $result")
-                onResult(result)
+                // FIX 2: Run success callback on Main Thread
+                Handler(Looper.getMainLooper()).post {
+                    onResult(result)
+                }
             }
         })
     }
@@ -323,17 +336,17 @@ fun Question1(onNextScreen: () -> Unit){
                     .padding(end = 20.dp, bottom = 20.dp) // Add spacing from the edges
                     .background(Color(0xFF27B51A), RoundedCornerShape(15.dp)) // Green bg
                     .clickable {
-//                        // 1. Convert drawing to bitmap
-//                        val bitmap = createBitmapFromPaths(paths, boxSizePx, boxSizePx)
-//                        val byteArray = bitmapToByteArray(bitmap)
-//
-//                        // 2. Send to Flask API
-//                        sendImageToFlask(byteArray) { result ->
-//                            Log.d("API_RESULT", result)
-//                        }
 
-                        // 3. Navigate to next screen
-                        onNextScreen()
+                            val bitmap = createBitmapFromPaths(paths, boxSizePx, boxSizePx)
+                            val bytes = bitmapToByteArray(bitmap)
+                            val currentUser = FirebaseAuth.getInstance().currentUser
+                            if (currentUser != null) {
+                                val userId = currentUser.uid
+                                sendImageToFlask(userId, bytes) { result ->
+                                    onNextScreen()
+                                }
+                            }
+
                     }
                     .padding(horizontal = 40.dp, vertical = 15.dp) // Padding inside the button
             ) {
