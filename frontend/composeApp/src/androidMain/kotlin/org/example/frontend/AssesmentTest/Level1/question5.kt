@@ -5,28 +5,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,85 +23,123 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import org.example.frontend.R
 import android.media.MediaPlayer
-import java.io.ByteArrayOutputStream
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Call
-import okhttp3.Callback
-import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
-import okio.IOException
+import okhttp3.*
+import java.io.IOException
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.ImageLoader
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 import android.os.Build.VERSION.SDK_INT
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.IconButton
 import coil.decode.GifDecoder
-import android.graphics.Bitmap
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.runtime.LaunchedEffect
+import android.util.Log
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
+import com.google.firebase.auth.FirebaseAuth
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-// --- FIX: Made these private to avoid conflict with Question4 ---
+// Define Colors
 private val GreenText1 = Color(0xFF27B51A)
 private val TranslucentWhite1 = Color(0xC7FFFFFF)
 private val ErrorRed1 = Color(0xFFFF0000)
-// Purple is unique to Q5, but good practice to keep private if only used here
-private val PurpleBorder = Color(0xFF9747FF)
 
 @Composable
-fun Question5() {
+fun Question5(onNextScreen: () -> Unit) {
     // --- STATE VARIABLES ---
     var popupMessage by remember { mutableStateOf("Click the left foot of the character below ?") }
 
     // Game Logic State
     val isErrorState = remember { mutableStateOf(false) }
     val isSuccessState = remember { mutableStateOf(false) }
+
+    // **FIXED: Scope is required for the Next button**
     val scope = rememberCoroutineScope()
 
-    // --- LOGIC FUNCTION ---
+    // --- FLASK HANDLER ---
+    val question_number = "5"
+    // Use 10.0.2.2 for Android Emulator, or your specific IP
+    val ip_address = "http://10.253.182.156:5000"
+
+    fun sendDataToFlask(userid: String, selection: String, onResult: (String) -> Unit) {
+        val client = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("user_id", userid)
+            .addFormDataPart("question_number", question_number)
+            .addFormDataPart("arrow_selected", selection)
+            .build()
+
+        val request = Request.Builder()
+            .url(ip_address + "/predict_q5")
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("FlaskAPI", "Error! ${e.message}", e)
+                Handler(Looper.getMainLooper()).post {
+                    onResult("Error: ${e.message}")
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val result = response.body?.string() ?: "No response"
+                Log.d("FlaskAPI", "Response: $result")
+                Handler(Looper.getMainLooper()).post {
+                    onResult(result)
+                }
+            }
+        })
+    }
+
+    val context = LocalContext.current
+
+    // --- LOGIC FUNCTION (NO TIMERS FOR BORDERS) ---
     fun checkAnswer(isLeftFoot: Boolean) {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        val userId = currentUser?.uid ?: "TEST_USER_123"
+
         if (isLeftFoot) {
-            // Correct Answer: Turn Green, wait, then Navigate
+            // --- CORRECT ANSWER ---
+            // Turn Green and stay Green (No Delay)
             isSuccessState.value = true
-            scope.launch {
-                delay(1000) // Show green for 1 second
-//                onNextScreen()
-                isSuccessState.value = false
+            isErrorState.value = false
+
+            sendDataToFlask(userId, "Completed") { res ->
+                Log.d("FlaskAPI", "Success Sent: $res")
             }
+            Toast.makeText(context, "Correct!", Toast.LENGTH_SHORT).show()
+
         } else {
-            // Incorrect Answer: Turn Red, wait, then Reset
+            // --- INCORRECT ANSWER ---
+            // Turn Red and stay Red (No Delay)
             isErrorState.value = true
-            scope.launch {
-                delay(1000) // Show red for 1 second
-                isErrorState.value = false
+            isSuccessState.value = false
+
+            sendDataToFlask(userId, "Right") { res ->
+                Log.d("FlaskAPI", "Error Sent: $res")
             }
+            Toast.makeText(context, "Wrong Foot!", Toast.LENGTH_SHORT).show()
         }
     }
 
-
-
-    // Determine Border Color dynamically
+    // --- COLOR LOGIC ---
     val currentBorderColor = when {
-        isSuccessState.value -> GreenText1
-        isErrorState.value -> ErrorRed1
+        isSuccessState.value -> GreenText1  // Green if Correct
+        isErrorState.value -> ErrorRed1     // Red if Wrong
         else -> Color.White
     }
 
-
-    //GIPHY HANDLER
-    val context = LocalContext.current
     val imageLoader = remember {
         ImageLoader.Builder(context)
             .components {
@@ -130,16 +152,9 @@ fun Question5() {
             .build()
     }
 
-    //MEDIA HANDLER
-    val overlay_boolean= remember { mutableStateOf(false) }
-    val speaker_boolean = remember { mutableStateOf(false) }
-    fun Clicked_Speaker(){
-        overlay_boolean.value = true
-        speaker_boolean.value = true
-    }
+    val overlay_boolean = remember { mutableStateOf(false) }
 
-
-
+    // This handles the Sound Overlay (Doraemon)
     LaunchedEffect(overlay_boolean.value) {
         if (overlay_boolean.value) {
             val mediaPlayer = MediaPlayer.create(context, R.raw.doraemon_alevel1q5)
@@ -147,15 +162,14 @@ fun Question5() {
             mediaPlayer.setOnCompletionListener {
                 it.release()
             }
+            // This delay is ONLY for the sound popup to disappear automatically
             delay(5000)
             overlay_boolean.value = false
-            speaker_boolean.value = false
         }
     }
 
     MaterialTheme {
         Box(modifier = Modifier.fillMaxSize()) {
-            // 1. Background Image
             Image(
                 painter = painterResource(id = R.drawable.question5bkg),
                 contentDescription = "Forest Background",
@@ -163,7 +177,6 @@ fun Question5() {
                 modifier = Modifier.fillMaxSize()
             )
 
-            // 2. Main Content Card
             Column(
                 modifier = Modifier.align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -178,7 +191,6 @@ fun Question5() {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(0.dp, Alignment.Top)
                 ) {
-                    // --- Header ---
                     Text(
                         modifier = Modifier.height(50.dp),
                         text = "Question no 5",
@@ -191,7 +203,6 @@ fun Question5() {
                         ),
                     )
 
-                    // --- Instructions Row ---
                     Row(
                         modifier = Modifier.width(299.dp).height(100.dp)
                             .padding(start = 10.dp, end = 10.dp),
@@ -210,14 +221,12 @@ fun Question5() {
                             ),
                         )
 
-
-                        // Speaker Button
                         IconButton(
                             onClick = {
                                 popupMessage = "Click the left foot of the character below ?"
                                 overlay_boolean.value = true
                             },
-                            modifier = Modifier.width(35.dp) .height(35.dp)
+                            modifier = Modifier.width(35.dp).height(35.dp)
                         ) {
                             Column(
                                 modifier = Modifier
@@ -242,7 +251,6 @@ fun Question5() {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // The Box with the Image and Hitboxes
                             Box(
                                 modifier = Modifier
                                     .size(230.dp)
@@ -253,7 +261,6 @@ fun Question5() {
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
-                                // Character Image
                                 Image(
                                     painter = painterResource(id = R.drawable.mario),
                                     contentDescription = "Character",
@@ -262,8 +269,6 @@ fun Question5() {
                                         .fillMaxSize()
                                         .padding(10.dp)
                                 )
-
-                                // --- HITBOXES ---
 
                                 // 1. Left Foot (Correct)
                                 Box(
@@ -295,7 +300,6 @@ fun Question5() {
                     }
                     Spacer(modifier = Modifier.weight(1f))
 
-                    // 2. Row aligns button to the Right
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -306,8 +310,14 @@ fun Question5() {
                             modifier = Modifier
                                 .background(Color(0xFF27B51A), RoundedCornerShape(20.dp))
                                 .clickable {
-                                    // Navigate to Home or Result Screen
-               //                     navController.navigate("HomeScreen")
+                                    // Using scope here to launch coroutine for Flask call + Navigation
+                                    scope.launch {
+                                        val currentUser = FirebaseAuth.getInstance().currentUser
+                                        val userId = currentUser?.uid ?: "TEST_USER_123"
+                                        sendDataToFlask(userId, "Completed") { result ->
+                                            onNextScreen()
+                                        }
+                                    }
                                 }
                                 .padding(horizontal = 40.dp, vertical = 15.dp)
                         ) {
@@ -325,29 +335,20 @@ fun Question5() {
                 }
             }
 
-            // --- POPUP LOGIC ---
             if (overlay_boolean.value) {
-
-
                 Box(
-                    modifier=Modifier
+                    modifier = Modifier
                         .offset(x = 0.dp, y = 0.dp)
                         .width(430.dp)
                         .height(932.dp)
                         .background(color = Color(0x4FFFFFFF))
                         .fillMaxSize()
-
                 ) {
-                    //Speech Bubble Location
-
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(color = Color(0x4FFFFFFF))
-
                     ) {
-                        // --- SPEECH BUBBLE (Center Right) ---
-
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
@@ -369,8 +370,6 @@ fun Question5() {
                                 )
                             )
                         }
-                        // --- DORAEMON (Bottom Left) ---
-
                         AsyncImage(
                             model = ImageRequest.Builder(context)
                                 .data(R.drawable.doraemon2)
@@ -386,8 +385,7 @@ fun Question5() {
                         )
                     }
                 }
-
-                }
+            }
         }
     }
 }

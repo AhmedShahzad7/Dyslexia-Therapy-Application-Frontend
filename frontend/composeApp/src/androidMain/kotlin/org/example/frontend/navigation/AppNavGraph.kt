@@ -30,7 +30,7 @@ import org.example.frontend.AssesmentTest.Level4.Question17 as Alvl4Q17
 import org.example.frontend.AssesmentTest.Level4.Question18 as Alvl4Q18
 import org.example.frontend.AssesmentTest.Level4.Question19 as Alvl4Q19
 @Composable
-fun AppNavGraph(startDestination: String = "Alvl1Q3") {
+fun AppNavGraph(startDestination: String = "Alvl1Q4") {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = startDestination) {
@@ -45,7 +45,7 @@ fun AppNavGraph(startDestination: String = "Alvl1Q3") {
         composable("SignUpScreen") {
             SignUpScreen(
                 onBack = { navController.popBackStack() },
-                onNextScreen={navController.navigate("Question1")}
+                onNextScreen={navController.navigate("Question4")}
             )
         }
         composable("HomeScreen") {
@@ -86,8 +86,9 @@ fun AppNavGraph(startDestination: String = "Alvl1Q3") {
             )
         }
         composable("Alvl1Q5") {
-            Alvl1Q5()
+            Alvl1Q5(onNextScreen = { navController.navigate("Alvl2Q6")})
         }
+
         composable("Alvl2Q6") {
             Alvl2Q6()
         }
