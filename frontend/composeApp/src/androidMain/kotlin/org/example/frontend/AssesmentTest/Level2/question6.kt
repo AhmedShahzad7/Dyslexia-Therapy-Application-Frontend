@@ -3,6 +3,9 @@ package org.example.frontend.AssesmentTest.Level2
 
 import android.media.MediaPlayer
 import android.os.Build.VERSION.SDK_INT
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,6 +40,13 @@ import coil.request.ImageRequest
 import kotlinx.coroutines.delay
 import org.example.frontend.R
 import coil.ImageLoader
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okio.IOException
 import org.example.frontend.AssesmentTest.Level4.wordboxes
 
 
@@ -56,6 +66,41 @@ fun Question6(){
                 }
             }
             .build()
+    }
+
+
+    val question_number="6"
+    val ip_address="http://192.168.0.17:5000"
+    fun sendLetterToFlask(userid:String,letter: String,onResult: (String) -> Unit) {
+        val client = OkHttpClient()
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("user_id", userid)
+            .addFormDataPart("question_number", question_number)
+            .addFormDataPart("letter_selected", letter)
+            .build()
+
+        val request = Request.Builder()
+            .url(ip_address+"/predict_direction_mcq")
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("FlaskAPI", "Error! ${e.message}", e)
+                Handler(Looper.getMainLooper()).post {
+                    onResult("Error: ${e.message}")
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val result = response.body?.string() ?: "No response"
+                Log.d("FlaskAPI", "Response: $result")
+                Handler(Looper.getMainLooper()).post {
+                    onResult(result)
+                }
+            }
+        })
     }
 
     fun Clicked_Speaker(){

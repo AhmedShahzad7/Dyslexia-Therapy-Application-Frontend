@@ -119,7 +119,7 @@ fun Question2(onNextScreen: () -> Unit){
 
     //FLASK HANDLE
     val question_number="2"
-    val ip_address="http://192.168.1.2:5000"
+    val ip_address="http://192.168.0.17:5000"
     fun sendDirectionToFlask(userid:String,arrow_selected:String ,onResult: (String) -> Unit) {
         val client = OkHttpClient()
         val requestBody = MultipartBody.Builder()

@@ -41,21 +41,19 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 @Composable
-fun LoginScreen(onSignUpScreen: () -> Unit,navController: NavHostController,
+fun LoginScreen(onSignUpScreen: () -> Unit,navController: NavHostController,onassessmentScreen:()->Unit,
                 viewModel: LoginViewModel=androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     fun navigatetosignup()
     {
         onSignUpScreen()
     }
+
     val scope = rememberCoroutineScope()
     fun OnNextScreen() {
         scope.launch {
             delay(2000L)
-            navController.navigate("Alvl1Q1") {
-                popUpTo(0) { inclusive = true }
-                launchSingleTop = true
-            }
+            onassessmentScreen()
         }
     }
     var email by remember { mutableStateOf("") }
