@@ -100,18 +100,29 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.draw.alpha
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import kotlin.math.roundToInt
 
 
 
 
 @Composable
-fun Question14(){
+fun Question14(onNextScreen: () -> Unit){
     val context = LocalContext.current
     val overlay_boolean= remember { mutableStateOf(false) }
     val speaker_boolean = remember { mutableStateOf(false) }
     val part_boolean= remember { mutableStateOf(false) }
+    val allWords = remember {
+        listOf(
+            "was", "saw", "was",  // Row 1 (Indices 0, 1, 2)
+            "raw", "was", "why",  // Row 2 (Indices 3, 4, 5)
+            "saw", "way", "saw",  // Row 3 (Indices 6, 7, 8)
+            "win", "was", "war"   // Row 4 (Indices 9, 10, 11)
+        )
+    }
+    val tempStore = remember { mutableStateListOf<Int>() }
     //GIPHY HANDLER
     val imageLoader = remember {
         ImageLoader.Builder(context)
@@ -124,53 +135,27 @@ fun Question14(){
             }
             .build()
     }
-    //CANVA HANDLE
-    val paths = remember { mutableStateListOf<Path>() }
-    var currentPath by remember { mutableStateOf<Path?>(null) }
-    val density = LocalDensity.current
-    val targetPixels = 250
-    val boxSizeDp =250.dp
-    val boxSizePx = with(density) { targetPixels.dp.toPx().toInt() }
-
-    fun createBitmapFromPaths(paths: List<Path>, width: Int, height: Int): Bitmap {
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = android.graphics.Canvas(bitmap)
-        canvas.drawColor(android.graphics.Color.WHITE)
-        val paint = android.graphics.Paint().apply {
-            color = android.graphics.Color.BLACK
-            style = android.graphics.Paint.Style.STROKE
-            strokeWidth = 10f // Thicker lines show up better after resizing
-            isAntiAlias = true
-            strokeJoin = android.graphics.Paint.Join.ROUND
-            strokeCap = android.graphics.Paint.Cap.ROUND
+    //SENDING ERRORS TO FLASK VIA TEMP STORE VARIABLE
+    val question_number="14"
+    fun toggleSelection(index: Int) {
+        if (tempStore.contains(index)) {
+            tempStore.remove(index)
+        } else {
+            tempStore.add(index)
         }
-
-        paths.forEach { composePath ->
-            canvas.drawPath(composePath.asAndroidPath(), paint)
-        }
-
-        return bitmap
     }
-
-    fun bitmapToByteArray(bitmap: Bitmap): ByteArray {
-        val stream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-        return stream.toByteArray()
-    }
-
-    fun sendImageToFlask(byteArray: ByteArray, onResult: (String) -> Unit) {
+    fun sendErrorsToFlask(userid:String,answers:List<String>,onResult: (String) -> Unit) {
+        val answersJsonString = JSONArray(answers).toString()
         val client = OkHttpClient()
         val requestBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
-            .addFormDataPart(
-                "file",
-                "image.png",
-                byteArray.toRequestBody("image/png".toMediaTypeOrNull())
-            )
+            .addFormDataPart("user_id", userid)
+            .addFormDataPart("answers_list", answersJsonString)
+            .addFormDataPart("question_number", question_number)
             .build()
 
         val request = Request.Builder()
-            .url("http://192.168.10.108:5000/predict")
+            .url("http://192.168.1.9:5000/check_answers_q11")
             .post(requestBody)
             .build()
 
@@ -309,18 +294,9 @@ fun Question14(){
                             alignment = Alignment.CenterHorizontally
                         )
                     ){
-                        OptionCircle("was",
-                            onOptionClick = {
-                                Clicked_Option()
-                            })
-                        OptionCircle("saw",
-                            onOptionClick = {
-                                Clicked_Option()
-                            })
-                        OptionCircle("was",
-                            onOptionClick = {
-                                Clicked_Option()
-                            })
+                        OptionCircle(text = allWords[0], isSelected = tempStore.contains(0)) { toggleSelection(0) }
+                        OptionCircle(text = allWords[1], isSelected = tempStore.contains(1)) { toggleSelection(1) }
+                        OptionCircle(text = allWords[2], isSelected = tempStore.contains(2)) { toggleSelection(2) }
                     }
                     //ROW 2
                     Row(
@@ -330,18 +306,9 @@ fun Question14(){
                             alignment = Alignment.CenterHorizontally
                         )
                     ){
-                        OptionCircle("raw",
-                            onOptionClick = {
-                                Clicked_Option()
-                            })
-                        OptionCircle("was",
-                            onOptionClick = {
-                                Clicked_Option()
-                            })
-                        OptionCircle("why",
-                            onOptionClick = {
-                                Clicked_Option()
-                            })
+                        OptionCircle(text = allWords[3], isSelected = tempStore.contains(3)) { toggleSelection(3) }
+                        OptionCircle(text = allWords[4], isSelected = tempStore.contains(4)) { toggleSelection(4) }
+                        OptionCircle(text = allWords[5], isSelected = tempStore.contains(5)) { toggleSelection(5) }
                     }
                     //ROW 3
                     Row(
@@ -351,18 +318,9 @@ fun Question14(){
                             alignment = Alignment.CenterHorizontally
                         )
                     ){
-                        OptionCircle("saw",
-                            onOptionClick = {
-                                Clicked_Option()
-                            })
-                        OptionCircle("way",
-                            onOptionClick = {
-                                Clicked_Option()
-                            })
-                        OptionCircle("saw",
-                            onOptionClick = {
-                                Clicked_Option()
-                            })
+                        OptionCircle(text = allWords[6], isSelected = tempStore.contains(6)) { toggleSelection(6) }
+                        OptionCircle(text = allWords[7], isSelected = tempStore.contains(7)) { toggleSelection(7) }
+                        OptionCircle(text = allWords[8], isSelected = tempStore.contains(8)) { toggleSelection(8) }
                     }
 
                     //ROW 4
@@ -373,18 +331,9 @@ fun Question14(){
                             alignment = Alignment.CenterHorizontally
                         )
                     ){
-                        OptionCircle("win",
-                            onOptionClick = {
-                                Clicked_Option()
-                            })
-                        OptionCircle("was",
-                            onOptionClick = {
-                                Clicked_Option()
-                            })
-                        OptionCircle("war",
-                            onOptionClick = {
-                                Clicked_Option()
-                            })
+                        OptionCircle(text = allWords[9], isSelected = tempStore.contains(9)) { toggleSelection(9) }
+                        OptionCircle(text = allWords[10], isSelected = tempStore.contains(10)) { toggleSelection(10) }
+                        OptionCircle(text = allWords[11], isSelected = tempStore.contains(11)) { toggleSelection(11) }
                     }
 
 
@@ -436,17 +385,15 @@ fun Question14(){
                     .padding(end = 10.dp, bottom = 10.dp) // Add spacing from the edges
                     .background(Color(0xFF27B51A), RoundedCornerShape(15.dp)) // Green bg
                     .clickable {
-//                        // 1. Convert drawing to bitmap
-//                        val bitmap = createBitmapFromPaths(paths, boxSizePx, boxSizePx)
-//                        val byteArray = bitmapToByteArray(bitmap)
-//
-//                        // 2. Send to Flask API
-//                        sendImageToFlask(byteArray) { result ->
-//                            Log.d("API_RESULT", result)
-//                        }
-
-                        // 3. Navigate to next screen
-//                        onNextScreen()
+                        val finalAnswers = tempStore.map { index -> allWords[index] }
+                        val currentUser = FirebaseAuth.getInstance().currentUser
+                        if (currentUser != null) {
+                            val userId = currentUser.uid
+                            sendErrorsToFlask(userId,finalAnswers) { result ->
+                                Log.d("API_RESULT", result)
+                            }
+                            onNextScreen()
+                        }
                     }
                     .padding(horizontal = 20.dp, vertical = 5.dp) // Padding inside the button
             ) {
@@ -531,7 +478,8 @@ fun Question14(){
 @Composable
 private fun OptionCircle(
     text: String,
-    onOptionClick: () -> Unit,
+    isSelected: Boolean,
+    onOptionClick: (String) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -539,8 +487,13 @@ private fun OptionCircle(
             .width(50.dp)
             .height(50.dp)
             .background(color = Color(0xFFFFFFFF), shape = RoundedCornerShape(size = 75.dp))
-            .clickable { onOptionClick() }
-            .padding(top = 5.dp),
+            .border(
+                width = if (isSelected) 3.dp else 0.dp,
+                color = if (isSelected) Color(0xFF27B51A) else Color.Transparent,
+                shape = RoundedCornerShape(75.dp)
+            )
+            .padding(top = 5.dp)
+            .clickable { onOptionClick(text) },
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
