@@ -75,7 +75,7 @@ fun Question4(onNextScreen: () -> Unit) {
     // --- FLASK HANDLER ---
     val question_number = "4"
     // Use 10.0.2.2 for Emulator, use specific IP for real device
-    val ip_address = "http://10.253.182.156:5000"
+    val ip_address = "http://192.168.0.14:5000"
 
     fun sendDataToFlask(userid: String, selection: String, onResult: (String) -> Unit) {
         val client = OkHttpClient.Builder()

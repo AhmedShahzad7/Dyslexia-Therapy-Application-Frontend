@@ -70,6 +70,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import android.media.MediaPlayer
 import androidx.compose.ui.draw.shadow
+import com.google.firebase.auth.FirebaseAuth
 import java.io.ByteArrayOutputStream
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -80,15 +81,20 @@ import okhttp3.Callback
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okio.IOException
-
+import org.json.JSONArray
 
 
 @Composable
-fun Question11(){
+fun Question11(onNextScreen: () -> Unit){
     val context = LocalContext.current
     val overlay_boolean= remember { mutableStateOf(false) }
     val speaker_boolean = remember { mutableStateOf(false) }
     val part_boolean= remember { mutableStateOf(false) }
+
+    //BACKEND HANDLER VARIABLES
+    val temp_store=remember { mutableStateListOf<String>() }
+
+
     //GIPHY HANDLER
     val imageLoader = remember {
         ImageLoader.Builder(context)
@@ -101,53 +107,20 @@ fun Question11(){
             }
             .build()
     }
-    //CANVA HANDLE
-    val paths = remember { mutableStateListOf<Path>() }
-    var currentPath by remember { mutableStateOf<Path?>(null) }
-    val density = LocalDensity.current
-    val targetPixels = 250
-    val boxSizeDp =250.dp
-    val boxSizePx = with(density) { targetPixels.dp.toPx().toInt() }
-
-    fun createBitmapFromPaths(paths: List<Path>, width: Int, height: Int): Bitmap {
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = android.graphics.Canvas(bitmap)
-        canvas.drawColor(android.graphics.Color.WHITE)
-        val paint = android.graphics.Paint().apply {
-            color = android.graphics.Color.BLACK
-            style = android.graphics.Paint.Style.STROKE
-            strokeWidth = 10f // Thicker lines show up better after resizing
-            isAntiAlias = true
-            strokeJoin = android.graphics.Paint.Join.ROUND
-            strokeCap = android.graphics.Paint.Cap.ROUND
-        }
-
-        paths.forEach { composePath ->
-            canvas.drawPath(composePath.asAndroidPath(), paint)
-        }
-
-        return bitmap
-    }
-
-    fun bitmapToByteArray(bitmap: Bitmap): ByteArray {
-        val stream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-        return stream.toByteArray()
-    }
-
-    fun sendImageToFlask(byteArray: ByteArray, onResult: (String) -> Unit) {
+    //SENDING ERRORS TO FLASK VIA TEMP STORE VARIABLE
+    val question_number="11"
+    fun sendErrorsToFlask(userid:String,answers:List<String>,onResult: (String) -> Unit) {
+        val answersJsonString = JSONArray(answers).toString()
         val client = OkHttpClient()
         val requestBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
-            .addFormDataPart(
-                "file",
-                "image.png",
-                byteArray.toRequestBody("image/png".toMediaTypeOrNull())
-            )
+            .addFormDataPart("user_id", userid)
+            .addFormDataPart("answers_list", answersJsonString)
+            .addFormDataPart("question_number", question_number)
             .build()
 
         val request = Request.Builder()
-            .url("http://192.168.10.108:5000/predict")
+            .url("http://192.168.1.9:5000/check_answers_q11")
             .post(requestBody)
             .build()
 
@@ -171,6 +144,12 @@ fun Question11(){
         overlay_boolean.value = true
         speaker_boolean.value = true
     }
+
+
+
+
+
+
     LaunchedEffect(overlay_boolean.value) {
         if (overlay_boolean.value) {
             val mediaPlayer = MediaPlayer.create(context, R.raw.doraemon_alevel3q11)
@@ -184,10 +163,31 @@ fun Question11(){
         }
     }
     //PRESSED OPTION FUNCTION
-    fun Clicked_Option(){
-        part_boolean.value = true
+    fun Clicked_Option(item:String){
+        if(!part_boolean.value) {
+            temp_store.add(item);
+            part_boolean.value = true
+        }
+        else if(part_boolean.value){
+            temp_store.add(item);
+            val currentUser = FirebaseAuth.getInstance().currentUser
+            if (currentUser != null) {
+                val userId = currentUser.uid
+                sendErrorsToFlask(userId,temp_store) {
+                result ->Log.d("API_RESULT", result)
+                }
+                onNextScreen()
+            }
+        }
     }
 
+
+
+
+
+
+
+    //DISPLAY-----------------------
     Box(
         modifier=Modifier.fillMaxSize(),
     ){
@@ -296,13 +296,13 @@ fun Question11(){
                         verticalAlignment = Alignment.CenterVertically,
                     ){
                         OptionCircle("den",
-                            onOptionClick = {    Clicked_Option()}
+                            onOptionClick = {    Clicked_Option("den")}
                             )
                         OptionCircle("ben",
-                            onOptionClick = {    Clicked_Option()}
+                            onOptionClick = {    Clicked_Option("ben")}
                             )
                         OptionCircle("hen",
-                            onOptionClick = {    Clicked_Option()}
+                            onOptionClick = {    Clicked_Option("hen")}
                             )
                     }
 
@@ -335,13 +335,13 @@ fun Question11(){
                     ){
                         OptionCircle("qen",
                             onOptionClick = {
-                                Clicked_Option()
+                                Clicked_Option("qen")
                             })
                         OptionCircle("ten",
-                            onOptionClick = {    Clicked_Option()}
+                            onOptionClick = {    Clicked_Option("ten")}
                             )
                         OptionCircle("pen",
-                            onOptionClick = {    Clicked_Option()}
+                            onOptionClick = {    Clicked_Option("pen")}
                             )
                     }
 
@@ -367,36 +367,6 @@ fun Question11(){
 
 
             }//END OF MIDDLE BOX
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd) // Position at Bottom Right of the Blur Box
-                    .padding(end = 10.dp, bottom = 10.dp) // Add spacing from the edges
-                    .background(Color(0xFF27B51A), RoundedCornerShape(15.dp)) // Green bg
-                    .clickable {
-//                        // 1. Convert drawing to bitmap
-//                        val bitmap = createBitmapFromPaths(paths, boxSizePx, boxSizePx)
-//                        val byteArray = bitmapToByteArray(bitmap)
-//
-//                        // 2. Send to Flask API
-//                        sendImageToFlask(byteArray) { result ->
-//                            Log.d("API_RESULT", result)
-//                        }
-
-                        // 3. Navigate to next screen
-//                        onNextScreen()
-                    }
-                    .padding(horizontal = 20.dp, vertical = 5.dp) // Padding inside the button
-            ) {
-                Text(
-                    text = "Next",
-                    style = TextStyle(
-                        fontSize = 26.sp,
-                        fontFamily = FontFamily(Font(R.font.windsol)),
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                )
-            }
         } //END OF ORIGINAL SCREEN
 
 

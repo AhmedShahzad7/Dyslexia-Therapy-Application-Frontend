@@ -162,7 +162,7 @@ fun Question1(onNextScreen: () -> Unit){
             .build()
 
         val request = Request.Builder()
-            .url("http://192.168.1.2:5000/predict_direction")
+            .url("http://192.168.0.14:5000/predict_direction")
             .post(requestBody)
             .build()
 

@@ -30,6 +30,8 @@ kotlin {
             implementation(libs.googleid)
             implementation("io.coil-kt:coil-compose:2.5.0")
             implementation("io.coil-kt:coil-gif:2.5.0")
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
         }
         commonMain.dependencies {
             implementation(compose.runtime)

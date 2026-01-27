@@ -70,6 +70,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import android.media.MediaPlayer
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.ui.draw.shadow
 import java.io.ByteArrayOutputStream
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -100,6 +102,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.draw.alpha
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -110,8 +113,73 @@ data class CardItemBox(
     val length:Int,
 )
 
+//CANVA HANDLER
+fun createBitmapFromPaths(paths: List<Path>, width: Int, height: Int): Bitmap {
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bitmap)
+    canvas.drawColor(android.graphics.Color.WHITE)
+    val paint = android.graphics.Paint().apply {
+        color = android.graphics.Color.BLACK
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = 10f // Thicker lines show up better after resizing
+        isAntiAlias = true
+        strokeJoin = android.graphics.Paint.Join.ROUND
+        strokeCap = android.graphics.Paint.Cap.ROUND
+    }
+
+    paths.forEach { composePath ->
+        canvas.drawPath(composePath.asAndroidPath(), paint)
+    }
+
+    return bitmap
+}
+
+fun bitmapToByteArray(bitmap: Bitmap): ByteArray {
+    val stream = ByteArrayOutputStream()
+    bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+    return stream.toByteArray()
+}
 
 
+fun sendBatchImagesToFlask(
+    userID: String,
+    word: String,
+    images: List<ByteArray>,
+    onResult: (String) -> Unit
+) {
+    val client = OkHttpClient()
+    val multipartBuilder = MultipartBody.Builder().setType(MultipartBody.FORM)
+
+    // Add Text Data
+    multipartBuilder.addFormDataPart("user_id", userID)
+    multipartBuilder.addFormDataPart("target_word", word)
+    multipartBuilder.addFormDataPart("question_number", "15")
+
+    // Loop to Add All Images
+    images.forEachIndexed { index, byteArray ->
+        multipartBuilder.addFormDataPart(
+            "images", // The key Python will look for (can use getlist)
+            "letter_$index.png", // Filename
+            byteArray.toRequestBody("image/png".toMediaTypeOrNull())
+        )
+    }
+
+    val request = Request.Builder()
+        .url("http://192.168.1.9:5000/predict_handwriting_batch")
+        .post(multipartBuilder.build())
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            Handler(Looper.getMainLooper()).post { onResult("Error: ${e.message}") }
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            val result = response.body?.string() ?: "No response"
+            Handler(Looper.getMainLooper()).post { onResult(result) }
+        }
+    })
+}
 
 
 @Composable
@@ -174,7 +242,6 @@ fun Question15(){
     LaunchedEffect(cards.size) {
         if (cards.isNotEmpty()) {
             autoDismissTop = false
-            delay(2000) // ⏱ placeholder delay
             autoDismissTop = false
         }
     }
@@ -284,6 +351,8 @@ fun Question15(){
                 ) {
                     cards.forEachIndexed { index, card ->
                         val isTopCard = index == cards.lastIndex
+                        var triggerAutoSwipe by remember { mutableStateOf(false) }
+                        var isLoading by remember { mutableStateOf(false) }
                         SwipeCard_Box(
                             modifier = Modifier
                                 .graphicsLayer {
@@ -295,6 +364,8 @@ fun Question15(){
                                     // Push lower cards slightly down
                                     translationY = (cards.lastIndex - index) * 10f
                                 },
+                            enabled = false,
+                            autoDismiss = triggerAutoSwipe,
                             onDismiss = {
                                 if (isTopCard) {
 
@@ -304,14 +375,16 @@ fun Question15(){
                                     }
                                 }
                             },
-                            autoDismiss = isTopCard && autoDismissTop,
+
                         ) {
 
                             //CONTENT
+                            val drawingState = remember { mutableStateMapOf<Int, List<Path>>() }
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(18.dp)
                             ){
+
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -329,9 +402,32 @@ fun Question15(){
                                         )
                                     )
                                 }
+//
+//                                WordGrid(word = card.word)
+                                val chunks = card.word.chunked(3)
+                                var globalIndexCounter = 0 // Helps us track index 0, 1, 2, 3... across rows
 
-                                WordGrid(word = card.word)
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(18.dp)
+                                ) {
+                                    chunks.forEach { chunk ->
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            chunk.forEach { char ->
+                                                val myIndex = globalIndexCounter++
 
+                                                LetterBox(
+                                                    char = char,
+                                                    paths = drawingState[myIndex] ?: emptyList(),
+                                                    onPathUpdate = { newPath ->
+                                                        val currentList = drawingState[myIndex] ?: emptyList()
+                                                        drawingState[myIndex] = currentList + newPath
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
 
                                 //SUBMIT BUTTON
 
@@ -341,11 +437,49 @@ fun Question15(){
                                             .width(150.dp)
                                             .height(50.dp)
                                             .background(color = Color(0xF527B51A), shape = RoundedCornerShape(size = 35.dp))
-                                            .padding(start = 10.dp, top = 10.dp, end = 10.dp, bottom = 10.dp),
+                                            .padding(start = 10.dp, top = 10.dp, end = 10.dp, bottom = 10.dp)
+                                            .clickable(enabled = !isLoading){
+                                                // A. Check if they drew something for every letter
+                                                if (drawingState.size < card.word.length) {
+                                                    // Optional: Show Toast "Please fill all boxes"
+                                                    Log.d("Submission", "Incomplete drawings")
+                                                    return@clickable
+                                                }
+                                                isLoading = true
+
+                                                // B. Prepare data for submission
+                                                // We need the density to calculate pixel size for bitmap
+                                                val boxSizePx = 150 // 50dp * 3 (approx) or calculated via density
+
+                                                // Convert Map to a List of ByteArrays (Images) in order
+                                                val imageList = card.word.indices.map { index ->
+                                                    val paths = drawingState[index] ?: emptyList()
+                                                    val bitmap = createBitmapFromPaths(paths, boxSizePx, boxSizePx)
+                                                    bitmapToByteArray(bitmap)
+                                                }
+                                                val currentUser = FirebaseAuth.getInstance().currentUser
+                                                if (currentUser != null) {
+                                                    val userId = currentUser.uid
+
+                                                    // C. Send to Flask
+                                                    sendBatchImagesToFlask(
+                                                        userID = userId, // Replace with actual ID
+                                                        word = card.word,
+                                                        images = imageList
+                                                    ) { result ->
+                                                        Log.d("FlaskAPI", "Result: $result")
+                                                        isLoading = false
+                                                        // Handle Success (e.g., swipe card away)
+                                                        triggerAutoSwipe = true
+                                                    }
+                                                }else{
+                                                    isLoading = false
+                                                }
+                                            },
                                         contentAlignment = Alignment.Center
                                     ){
                                         Text(
-                                            text = "Submit",
+                                            text =if (isLoading) "Checking..." else "Submit",
                                             style = TextStyle(
                                                 fontSize = 24.sp,
                                                 fontFamily = FontFamily(Font(R.font.windsol)),
@@ -582,97 +716,51 @@ fun SwipeCard_Box(
 
 
 
-@Composable
-fun WordGrid(word: String) {
-    // 1. Break the word into chunks of 3 characters
-    // "friend" becomes ["fri", "end"]
-    // "big" becomes ["big"]
-    val chunks = word.chunked(3)
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(18.dp) // Space between rows
-    ) {
-        chunks.forEach { chunk ->
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp), // Space between letters
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                chunk.forEach { char ->
-                    // This is the individual Letter Box
-                    LetterBox(char = char)
-                }
-            }
-        }
-    }
-}
+//@Composable
+//fun WordGrid(word: String) {
+//    // 1. Break the word into chunks of 3 characters
+//    // "friend" becomes ["fri", "end"]
+//    // "big" becomes ["big"]
+//    val chunks = word.chunked(3)
+//    var globalIndexCounter = 0
+//
+//    Column(
+//        horizontalAlignment = Alignment.CenterHorizontally,
+//        verticalArrangement = Arrangement.spacedBy(18.dp) // Space between rows
+//    ) {
+//        chunks.forEach { chunk ->
+//            Row(
+//                horizontalArrangement = Arrangement.spacedBy(8.dp), // Space between letters
+//                verticalAlignment = Alignment.CenterVertically
+//            ) {
+//                chunk.forEach { char ->
+//                    val myIndex = globalIndexCounter++ // Capture current index
+//                    LetterBox(
+//                        char = char,
+//                        // Pass existing paths or empty list if none
+//                        paths = drawingState[myIndex] ?: emptyList(),
+//                        // When user draws, update the map
+//                        onPathUpdate = { newPath ->
+//                            val currentList = drawingState[myIndex] ?: emptyList()
+//                            drawingState[myIndex] = currentList + newPath
+//                        }
+//                    )
+//                }
+//            }
+//        }
+//    }
+//}
 
 // A reusable styled box for a single letter
 @Composable
-fun LetterBox(char: Char) {
-    //CANVA HANDLE
-    val paths = remember { mutableStateListOf<Path>() }
+fun LetterBox(char: Char,
+    paths: List<Path>,
+    onPathUpdate: (Path) -> Unit
+    ) {
     var currentPath by remember { mutableStateOf<Path?>(null) }
     val density = LocalDensity.current
-    val targetPixels = 50
-    val boxSizeDp =50.dp
-    val boxSizePx = with(density) { targetPixels.dp.toPx().toInt() }
-
-    fun createBitmapFromPaths(paths: List<Path>, width: Int, height: Int): Bitmap {
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = android.graphics.Canvas(bitmap)
-        canvas.drawColor(android.graphics.Color.WHITE)
-        val paint = android.graphics.Paint().apply {
-            color = android.graphics.Color.BLACK
-            style = android.graphics.Paint.Style.STROKE
-            strokeWidth = 10f // Thicker lines show up better after resizing
-            isAntiAlias = true
-            strokeJoin = android.graphics.Paint.Join.ROUND
-            strokeCap = android.graphics.Paint.Cap.ROUND
-        }
-
-        paths.forEach { composePath ->
-            canvas.drawPath(composePath.asAndroidPath(), paint)
-        }
-
-        return bitmap
-    }
-
-    fun bitmapToByteArray(bitmap: Bitmap): ByteArray {
-        val stream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-        return stream.toByteArray()
-    }
-
-    fun sendImageToFlask(byteArray: ByteArray, onResult: (String) -> Unit) {
-        val client = OkHttpClient()
-        val requestBody = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart(
-                "file",
-                "image.png",
-                byteArray.toRequestBody("image/png".toMediaTypeOrNull())
-            )
-            .build()
-
-        val request = Request.Builder()
-            .url("http://192.168.10.108:5000/predict")
-            .post(requestBody)
-            .build()
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Log.e("FlaskAPI", "Error! ${e.message}", e)
-                onResult("Error: ${e.message}")
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                val result = response.body?.string() ?: "No response"
-                Log.d("FlaskAPI", "Response: $result")
-                onResult(result)
-            }
-        })
-    }
+    val boxSizeDp = 50.dp
 
     Box(
         modifier = Modifier
@@ -691,14 +779,12 @@ fun LetterBox(char: Char) {
                     },
                     onDrag = { change, _ ->
                         currentPath?.lineTo(change.position.x, change.position.y)
-// Trigger recomposition (hacky but works for Path updates)
                         currentPath = Path().apply {
                             currentPath?.let { addPath(it) }
                         }
                     },
                     onDragEnd = {
-
-                        currentPath?.let { paths.add(it) }
+                        currentPath?.let { onPathUpdate(it) }
                         currentPath = null
                     },
                     onDragCancel = {

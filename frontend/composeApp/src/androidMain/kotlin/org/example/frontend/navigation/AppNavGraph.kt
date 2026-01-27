@@ -25,19 +25,26 @@ import org.example.frontend.AssesmentTest.Level2.Question7 as Alvl2Q7
 import org.example.frontend.AssesmentTest.Level2.Question8 as Alvl2Q8
 import org.example.frontend.AssesmentTest.Level2.Question9 as Alvl2Q9
 import org.example.frontend.AssesmentTest.Level2.Question10 as Alvl2Q10
+import org.example.frontend.AssesmentTest.Level3.Question11 as Alvl3Q11
+import org.example.frontend.AssesmentTest.Level3.Question12 as Alvl3Q12
+import org.example.frontend.AssesmentTest.Level3.Question13 as Alvl3Q13
+import org.example.frontend.AssesmentTest.Level3.Question14 as Alvl3Q14
+import org.example.frontend.AssesmentTest.Level3.Question15 as Alvl3Q15
 import org.example.frontend.AssesmentTest.Level4.Question16 as Alvl4Q16
 import org.example.frontend.AssesmentTest.Level4.Question17 as Alvl4Q17
 import org.example.frontend.AssesmentTest.Level4.Question18 as Alvl4Q18
 import org.example.frontend.AssesmentTest.Level4.Question19 as Alvl4Q19
+import org.example.frontend.AssesmentTest.Level3.Question11 as Alvl3Q11
 @Composable
-fun AppNavGraph(startDestination: String = "Alvl1Q4") {
+fun AppNavGraph(startDestination: String = "LoginScreen") {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = startDestination) {
         composable("LoginScreen") {
             // pass navigation callback or navController to screen
             LoginScreen(
-                navController = navController,onSignUpScreen = { navController.navigate("SignUpScreen") }
+                navController = navController,onSignUpScreen = { navController.navigate("SignUpScreen") },
+                onassessmentScreen={navController.navigate("Alvl1Q1")}
                 )
 
 
@@ -45,7 +52,7 @@ fun AppNavGraph(startDestination: String = "Alvl1Q4") {
         composable("SignUpScreen") {
             SignUpScreen(
                 onBack = { navController.popBackStack() },
-                onNextScreen={navController.navigate("Question4")}
+                onNextScreen={navController.navigate("Question1")}
             )
         }
         composable("HomeScreen") {
@@ -90,19 +97,34 @@ fun AppNavGraph(startDestination: String = "Alvl1Q4") {
         }
 
         composable("Alvl2Q6") {
-            Alvl2Q6()
+            Alvl2Q6(onNextScreen = { navController.navigate("Alvl2Q7")})
         }
         composable("Alvl2Q7") {
-            Alvl2Q7()
+            Alvl2Q7(onNextScreen = { navController.navigate("Alvl2Q8")})
         }
         composable("Alvl2Q8") {
-            Alvl2Q8()
+            Alvl2Q8(onNextScreen = { navController.navigate("Alvl2Q9")})
         }
         composable("Alvl2Q9") {
-            Alvl2Q9()
+            Alvl2Q9(onNextScreen = { navController.navigate("Alvl2Q10")})
         }
         composable("Alvl2Q10") {
-            Alvl2Q10()
+            Alvl2Q10(onNextScreen = { navController.navigate("Alvl3Q11")})
+        }
+        composable("Alvl3Q11") {
+            Alvl3Q11(onNextScreen = { navController.navigate("Alvl3Q13")})
+        }
+        composable("Alvl3Q12") {
+            Alvl3Q12()
+        }
+        composable("Alvl3Q13") {
+            Alvl3Q13(onNextScreen = { navController.navigate("Alvl3Q14")})
+        }
+        composable("Alvl3Q14") {
+            Alvl3Q14(onNextScreen = { navController.navigate("Alvl3Q15")})
+        }
+        composable("Alvl3Q15") {
+            Alvl3Q15()
         }
         composable("Alvl4Q16") {
             Alvl4Q16()
