@@ -1,8 +1,13 @@
 package org.example.frontend.AssesmentTest.Level2
 
 
+import WaterSoundPlayer
+import android.graphics.Bitmap
 import android.media.MediaPlayer
 import android.os.Build.VERSION.SDK_INT
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -14,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -27,10 +33,12 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -46,15 +54,39 @@ import coil.request.ImageRequest
 import kotlinx.coroutines.delay
 import org.example.frontend.R
 import coil.ImageLoader
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lettersViewModelSmall
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import okio.IOException
 import org.example.frontend.AssesmentTest.Level4.DrawingBox
+import java.io.ByteArrayOutputStream
 
 
 @Composable
-fun Question8(
+fun Question8(onNextScreen:()->Unit,
     viewModelSmall: lettersViewModelSmall=androidx.lifecycle.viewmodel.compose.viewModel (),
 ){
     val context = LocalContext.current
+    val waterSound = remember { WaterSoundPlayer(context) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            waterSound.release()
+        }
+    }
+
+
     val overlay_boolean= remember { mutableStateOf(false) }
     val speaker_boolean = remember { mutableStateOf(false) }
 
@@ -100,8 +132,105 @@ fun Question8(
 // States for Canvas 4
     val paths4 = remember { mutableStateListOf<Path>() }
     var currentPath4 by remember { mutableStateOf<Path?>(null) }
-
+    val density = LocalDensity.current
+    val targetPixels=64
     val boxSizeDp =64.dp
+    val boxSizePx = with(density) { targetPixels.dp.toPx().toInt() }
+
+
+    fun createBitmapFromPaths(paths: List<Path>, width: Int, height: Int): Bitmap {
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        canvas.drawColor(android.graphics.Color.WHITE)
+        val paint = android.graphics.Paint().apply {
+            color = android.graphics.Color.BLACK
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = 10f // Thicker lines show up better after resizing
+            isAntiAlias = true
+            strokeJoin = android.graphics.Paint.Join.ROUND
+            strokeCap = android.graphics.Paint.Cap.ROUND
+        }
+
+        paths.forEach { composePath ->
+            canvas.drawPath(composePath.asAndroidPath(), paint)
+        }
+
+        return bitmap
+    }
+
+    fun bitmapToByteArray(bitmap: Bitmap): ByteArray {
+        val stream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+        return stream.toByteArray()
+    }
+    val question_number="8"
+//    fun sendImageToFlask(userid:String, byteArray: ByteArray, expectedLetter:String, boxIndex: String, onResult: (String) -> Unit) {
+//        val client = OkHttpClient()
+//        val requestBody = MultipartBody.Builder()
+//            .setType(MultipartBody.FORM)
+//            .addFormDataPart(
+//                "file",
+//                "image.png",
+//                byteArray.toRequestBody("image/png".toMediaTypeOrNull())
+//            )
+//
+//            .addFormDataPart("user_id", userid)
+//            .addFormDataPart("question_number", question_number)
+//            .addFormDataPart("expected_Letter", expectedLetter)
+//            .addFormDataPart("Box_Index",boxIndex)
+//            .build()
+//
+//        val request = Request.Builder()
+//            .url("http://192.168.0.14:5000/predict_q8")
+//            .post(requestBody)
+//            .build()
+//
+//        // FOR NEXT PAGE FIX CHECK FUNCTION
+//        client.newCall(request).enqueue(object : Callback {
+//            override fun onFailure(call: Call, e: IOException) {
+//                Log.e("FlaskAPI", "Error! ${e.message}", e)
+//                Handler(Looper.getMainLooper()).post {
+//                    onResult("Error: ${e.message}")
+//                }
+//            }
+//
+//            override fun onResponse(call: Call, response: Response) {
+//                val result = response.body?.string() ?: "No response"
+//                Log.d("FlaskAPI", "Response: $result")
+//                // FIX 2: Run success callback on Main Thread
+//                Handler(Looper.getMainLooper()).post {
+//                    onResult(result)
+//                }
+//            }
+//        })
+//    }
+suspend fun sendImageToFlaskSuspend(
+    userId: String,
+    byteArray: ByteArray,
+    expectedLetter: String,
+    boxIndex: String
+): String = withContext(Dispatchers.IO) {
+    val client = OkHttpClient()
+    val requestBody = MultipartBody.Builder()
+        .setType(MultipartBody.FORM)
+        .addFormDataPart("file", "image.png", byteArray.toRequestBody("image/png".toMediaTypeOrNull()))
+        .addFormDataPart("user_id", userId)
+        .addFormDataPart("question_number", "8")
+        .addFormDataPart("expected_Letter", expectedLetter)
+        .addFormDataPart("Box_Index", boxIndex)
+        .build()
+
+    val request = Request.Builder()
+        .url("http://192.168.0.14:5000/predict_q8")
+        .post(requestBody)
+        .build()
+
+    client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) throw IOException("Unexpected code $response")
+        return@withContext response.body?.string() ?: "No response"
+    }
+}
+
 
     Box(
         modifier=Modifier.fillMaxSize(),
@@ -215,24 +344,29 @@ fun Question8(
                     )
                     {
                         Column(
-                            modifier = Modifier.width(boxSizeDp )
-                                .wrapContentHeight()
-                                .border(width = 2.dp, color = Color.Gray, shape = RoundedCornerShape(8.dp)),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
-                        ) {
+                            modifier = Modifier
+                                .wrapContentSize(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp), // space between rows
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        )
+                        {
 
 
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
 
                                 Box(
                                     modifier = Modifier
                                         .size(boxSizeDp) // Use the variable
                                         .background(color = Color.White)
                                         .clipToBounds()
+                                        .border(2.dp, Color.Gray, RoundedCornerShape(8.dp))
                                         .pointerInput(Unit) {
                                             detectDragGestures(
                                                 onDragStart = { offset ->
-//                                                waterSound.start()
+                                                    waterSound.start()
                                                     val newPath = Path().apply { moveTo(offset.x, offset.y) }
                                                     currentPath1 = newPath
                                                 },
@@ -244,12 +378,12 @@ fun Question8(
                                                     }
                                                 },
                                                 onDragEnd = {
-//                                                waterSound.stop()
+                                                    waterSound.stop()
                                                     currentPath1?.let { paths1.add(it) }
                                                     currentPath1 = null
                                                 },
                                                 onDragCancel = {
-//                                                waterSound.stop()
+                                                    waterSound.stop()
                                                 }
                                             )
                                         }
@@ -274,10 +408,11 @@ fun Question8(
                                         .size(boxSizeDp) // Use the variable
                                         .background(color = Color.White)
                                         .clipToBounds()
+                                        .border(2.dp, Color.Gray, RoundedCornerShape(8.dp))
                                         .pointerInput(Unit) {
                                             detectDragGestures(
                                                 onDragStart = { offset ->
-//                                                waterSound.start()
+                                                waterSound.start()
                                                     val newPath = Path().apply { moveTo(offset.x, offset.y) }
                                                     currentPath2 = newPath
                                                 },
@@ -289,19 +424,19 @@ fun Question8(
                                                     }
                                                 },
                                                 onDragEnd = {
-//                                                waterSound.stop()
+                                                waterSound.stop()
                                                     currentPath2?.let { paths2.add(it) }
                                                     currentPath2 = null
                                                 },
                                                 onDragCancel = {
-//                                                waterSound.stop()
+                                                waterSound.stop()
                                                 }
                                             )
                                         }
                                 ) {
                                     Canvas(modifier = Modifier.fillMaxSize()) {
                                         with(viewModelSmall) {
-                                            drawDottedLettern()
+                                            drawDottedLetteru()
                                         }
 //
 
@@ -314,15 +449,21 @@ fun Question8(
                                     }
 
                                 }
+                            }
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Box(
                                     modifier = Modifier
                                         .size(boxSizeDp) // Use the variable
                                         .background(color = Color.White)
                                         .clipToBounds()
+                                        .border(2.dp, Color.Gray, RoundedCornerShape(8.dp))
                                         .pointerInput(Unit) {
                                             detectDragGestures(
                                                 onDragStart = { offset ->
-//                                                waterSound.start()
+                                                    waterSound.start()
                                                     val newPath = Path().apply { moveTo(offset.x, offset.y) }
                                                     currentPath3 = newPath
                                                 },
@@ -334,19 +475,19 @@ fun Question8(
                                                     }
                                                 },
                                                 onDragEnd = {
-//                                                waterSound.stop()
+                                                    waterSound.stop()
                                                     currentPath3?.let { paths3.add(it) }
                                                     currentPath3 = null
                                                 },
                                                 onDragCancel = {
-//                                                waterSound.stop()
+                                                    waterSound.stop()
                                                 }
                                             )
                                         }
                                 ) {
                                     Canvas(modifier = Modifier.fillMaxSize()) {
                                         with(viewModelSmall) {
-                                            drawDottedLettern()
+                                            drawDottedLetters()
                                         }
 //
 
@@ -364,10 +505,11 @@ fun Question8(
                                         .size(boxSizeDp) // Use the variable
                                         .background(color = Color.White)
                                         .clipToBounds()
+                                        .border(2.dp, Color.Gray, RoundedCornerShape(8.dp))
                                         .pointerInput(Unit) {
                                             detectDragGestures(
                                                 onDragStart = { offset ->
-//                                                waterSound.start()
+                                                    waterSound.start()
                                                     val newPath = Path().apply { moveTo(offset.x, offset.y) }
                                                     currentPath4 = newPath
                                                 },
@@ -379,21 +521,21 @@ fun Question8(
                                                     }
                                                 },
                                                 onDragEnd = {
-//                                                waterSound.stop()
+                                                    waterSound.stop()
                                                     currentPath4?.let { paths4.add(it) }
                                                     currentPath4 = null
                                                 },
                                                 onDragCancel = {
-//                                                waterSound.stop()
+                                                    waterSound.stop()
                                                 }
                                             )
                                         }
                                 ) {
                                     Canvas(modifier = Modifier.fillMaxSize()) {
                                         with(viewModelSmall) {
-                                            drawDottedLettern()
+                                            drawDottedLetterz()
                                         }
-//
+
 
                                         paths4.forEach { path ->
                                             drawPath(path = path, color = Color.Black, style = Stroke(8f))
@@ -404,6 +546,7 @@ fun Question8(
                                     }
 
                                 }
+                            }
 
                         }
 
@@ -416,8 +559,33 @@ fun Question8(
                                 .height(50.dp)
                                 .background(color = Color(0xF527B51A), shape = RoundedCornerShape(size = 35.dp))
                                 .clickable {
+                                    val currentUser = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+                                    CoroutineScope(Dispatchers.Main).launch {
+                                        //For n
+                                        val bitmap1 = createBitmapFromPaths(paths1, boxSizePx, boxSizePx)
+                                        val bytes1 = bitmapToByteArray(bitmap1)
+                                        val currentUser = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+                                        val result1 = sendImageToFlaskSuspend(currentUser, bytes1, "n", "1")
+                                        println("Box 1 | Expected: n | Prediction: $result1")
 
+                                        //For u
+                                        val bitmap2 = createBitmapFromPaths(paths2, boxSizePx, boxSizePx)
+                                        val bytes2 = bitmapToByteArray(bitmap2)
+                                        val result2 = sendImageToFlaskSuspend(currentUser, bytes2, "u", "2")
+                                        println("Box 2 | Expected: u | Prediction: $result2")
+                                        //For s
+                                        val bitmap3 = createBitmapFromPaths(paths3, boxSizePx, boxSizePx)
+                                        val bytes3 = bitmapToByteArray(bitmap3)
+                                        val result3 = sendImageToFlaskSuspend(currentUser, bytes3, "s", "3")
+                                        println("Box 3 | Expected: s | Prediction: $result3")
+                                        //For z
+                                        val bitmap4 = createBitmapFromPaths(paths4, boxSizePx, boxSizePx)
+                                        val bytes4 = bitmapToByteArray(bitmap4)
+                                        val result4 = sendImageToFlaskSuspend(currentUser, bytes4, "Z", "4")
+                                        println("Box 4 | Expected: Z | Prediction: $result4")
 
+                                    }
+                                    onNextScreen()
                                 },
                             contentAlignment = Alignment.Center
 

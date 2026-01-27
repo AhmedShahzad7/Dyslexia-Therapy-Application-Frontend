@@ -38,7 +38,7 @@ import coil.ImageLoader
 
 
 @Composable
-fun Question9(){
+fun Question9(onNextScreen:()->Unit){
     val context = LocalContext.current
     val overlay_boolean= remember { mutableStateOf(false) }
     val speaker_boolean = remember { mutableStateOf(false) }
