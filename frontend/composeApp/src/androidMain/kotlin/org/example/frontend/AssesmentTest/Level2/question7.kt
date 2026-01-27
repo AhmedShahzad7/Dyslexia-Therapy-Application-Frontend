@@ -1,8 +1,13 @@
 package org.example.frontend.AssesmentTest.Level2
 
 
+import WaterSoundPlayer
+import android.graphics.Bitmap
 import android.media.MediaPlayer
 import android.os.Build.VERSION.SDK_INT
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -14,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -27,10 +33,12 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -46,14 +54,101 @@ import coil.request.ImageRequest
 import kotlinx.coroutines.delay
 import org.example.frontend.R
 import coil.ImageLoader
+import com.google.firebase.auth.FirebaseAuth
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import okio.IOException
 import org.example.frontend.AssesmentTest.Level4.DrawingBox
+import java.io.ByteArrayOutputStream
 
 
 @Composable
-fun Question7(){
+fun Question7(onNextScreen: ()->Unit){
     val context = LocalContext.current
     val overlay_boolean= remember { mutableStateOf(false) }
     val speaker_boolean = remember { mutableStateOf(false) }
+
+
+    val waterSound = remember { WaterSoundPlayer(context) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            waterSound.release()
+        }
+    }
+
+
+    fun createBitmapFromPaths(paths: List<Path>, width: Int, height: Int): Bitmap {
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        canvas.drawColor(android.graphics.Color.WHITE)
+        val paint = android.graphics.Paint().apply {
+            color = android.graphics.Color.BLACK
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = 10f // Thicker lines show up better after resizing
+            isAntiAlias = true
+            strokeJoin = android.graphics.Paint.Join.ROUND
+            strokeCap = android.graphics.Paint.Cap.ROUND
+        }
+
+        paths.forEach { composePath ->
+            canvas.drawPath(composePath.asAndroidPath(), paint)
+        }
+
+        return bitmap
+    }
+
+    fun bitmapToByteArray(bitmap: Bitmap): ByteArray {
+        val stream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+        return stream.toByteArray()
+    }
+    val question_number="7"
+    fun sendImageToFlask(userid:String,byteArray: ByteArray,expectedLetter:String, onResult: (String) -> Unit) {
+        val client = OkHttpClient()
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart(
+                "file",
+                "image.png",
+                byteArray.toRequestBody("image/png".toMediaTypeOrNull())
+            )
+
+            .addFormDataPart("user_id", userid)
+            .addFormDataPart("question_number", question_number)
+            .addFormDataPart("expected_Letter", expectedLetter)
+            .build()
+
+        val request = Request.Builder()
+            .url("http://192.168.0.14:5000/predict_q7")
+            .post(requestBody)
+            .build()
+
+        // FOR NEXT PAGE FIX CHECK FUNCTION
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("FlaskAPI", "Error! ${e.message}", e)
+                Handler(Looper.getMainLooper()).post {
+                    onResult("Error: ${e.message}")
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val result = response.body?.string() ?: "No response"
+                Log.d("FlaskAPI", "Response: $result")
+                // FIX 2: Run success callback on Main Thread
+                Handler(Looper.getMainLooper()).post {
+                    onResult(result)
+                }
+            }
+        })
+    }
 
     val imageLoader = remember {
         ImageLoader.Builder(context)
@@ -92,8 +187,10 @@ fun Question7(){
     val currentindexletters=remember { mutableStateOf(0) }
     val paths = remember { mutableStateListOf<Path>() }
     var currentPath by remember { mutableStateOf<Path?>(null) }
-
+    val density = LocalDensity.current
+    val targetPixels=64
     val boxSizeDp =64.dp
+    val boxSizePx = with(density) { targetPixels.dp.toPx().toInt() }
 
     Box(
         modifier=Modifier.fillMaxSize(),
@@ -234,7 +331,7 @@ fun Question7(){
                                     .pointerInput(Unit) {
                                         detectDragGestures(
                                             onDragStart = { offset ->
-//                                                waterSound.start()
+                                                waterSound.start()
                                                 val newPath = Path().apply { moveTo(offset.x, offset.y) }
                                                 currentPath = newPath
                                             },
@@ -246,12 +343,12 @@ fun Question7(){
                                                 }
                                             },
                                             onDragEnd = {
-//                                                waterSound.stop()
+                                                waterSound.stop()
                                                 currentPath?.let { paths.add(it) }
                                                 currentPath = null
                                             },
                                             onDragCancel = {
-//                                                waterSound.stop()
+                                                waterSound.stop()
                                             }
                                         )
                                     }
@@ -277,11 +374,23 @@ fun Question7(){
                                 .height(50.dp)
                                 .background(color = Color(0xF527B51A), shape = RoundedCornerShape(size = 35.dp))
                                 .clickable {
+                                    val bitmap = createBitmapFromPaths(paths, boxSizePx, boxSizePx)
+                                    val bytes = bitmapToByteArray(bitmap)
+                                    val currentUser = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+                                    sendImageToFlask(currentUser, bytes,expectedLetter=letters[currentindexletters.value]) { result ->
+                                        println("Prediction: $result")
+                                    }
                                     paths.clear()
                                     currentPath = null
+
+
                                     if (currentindexletters.value<letters.lastIndex)
                                     {
                                         currentindexletters.value++
+                                    }
+                                    else
+                                    {
+                                        onNextScreen()
                                     }
 
                                 },

@@ -617,5 +617,128 @@ class lettersViewModelSmall : ViewModel() {
             )
         )
     }
+    fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDottedLetteru() {
+        val path = Path().apply {
+            val w = size.width
+            val h = size.height
+
+            // --- 1. The Deep Cup Shape ---
+            // Start at top left
+            moveTo(w * 0.35f, h * 0.40f)
+
+            // Draw further down before starting the curve
+            lineTo(w * 0.35f, h * 0.65f)
+
+            // Deep Curve (The Belly)
+            // We pull the control points down to 0.80f to "weight" the bottom
+            cubicTo(
+                w * 0.35f, h * 0.80f, // Control 1: Deep left
+                w * 0.65f, h * 0.80f, // Control 2: Deep right
+                w * 0.65f, h * 0.65f  // Destination: Bottom of right stem
+            )
+
+            // --- 2. The Right Stem ---
+            // Vertical line from top to bottom
+            moveTo(w * 0.65f, h * 0.40f)
+            lineTo(w * 0.65f, h * 0.75f) // Ends at the base of the deep belly
+        }
+
+        drawPath(
+            path = path,
+            color = Color.LightGray,
+            style = Stroke(
+                width = 6f,
+                pathEffect = PathEffect.dashPathEffect(
+                    floatArrayOf(12f, 12f), 0f
+                )
+            )
+        )
+    }
+    fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDottedLetters() {
+        val path = Path().apply {
+            val w = size.width
+            val h = size.height
+
+            // Define bounds with padding
+            val left = w * 0.2f
+            val right = w * 0.8f
+            val top = h * 0.15f
+            val bottom = h * 0.85f
+
+            // Define the "Belly" height (where the curve turns vertical)
+            val topBellyY = h * 0.38f
+            val bottomBellyY = h * 0.62f
+
+            // 1. Start at Top-Right Tip
+            moveTo(right, top + (h * 0.1f))
+
+            // 2. Top Arch (Tip -> Left Side)
+            cubicTo(
+                right, top,              // Control 1: Top-Right Corner
+                left, top,               // Control 2: Top-Left Corner
+                left, topBellyY          // End: Left side of the spine
+            )
+
+            // 3. The Spine (Left Side -> Right Side)
+            // This is the critical part for "Straightness".
+            // We pull down from the left and up from the right to force a steep angle.
+            cubicTo(
+                left, h * 0.55f,         // Control 1: Pulls down vertically
+                right, h * 0.45f,        // Control 2: Pulls up vertically
+                right, bottomBellyY      // End: Right side of the spine
+            )
+
+            // 4. Bottom Arch (Right Side -> Bottom Tip)
+            cubicTo(
+                right, bottom,           // Control 1: Bottom-Right Corner
+                left, bottom,            // Control 2: Bottom-Left Corner
+                left, bottom - (h * 0.1f)// End: Bottom-Left Tip
+            )
+        }
+
+        drawPath(
+            path = path,
+            color = Color.LightGray,
+            style = Stroke(
+                width = 6f,
+                pathEffect = PathEffect.dashPathEffect(
+                    floatArrayOf(12f, 12f),
+                    0f
+                )
+            )
+        )
+    }
+    fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDottedLetterz() {
+        val path = Path().apply {
+            val left = size.width * 0.25f
+            val right = size.width * 0.75f
+            val top = size.height * 0.2f
+            val bottom = size.height * 0.8f
+
+            // Top horizontal
+            moveTo(left, top)
+            lineTo(right, top)
+
+            // Diagonal from top-right to bottom-left
+            moveTo(right, top)
+            lineTo(left, bottom)
+
+            // Bottom horizontal
+            moveTo(left, bottom)
+            lineTo(right, bottom)
+        }
+
+        drawPath(
+            path = path,
+            color = Color.LightGray,
+            style = Stroke(
+                width = 6f,
+                pathEffect = PathEffect.dashPathEffect(
+                    floatArrayOf(12f, 12f),
+                    0f
+                )
+            )
+        )
+    }
 
 }
