@@ -81,11 +81,13 @@ import okhttp3.Callback
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okio.IOException
+import org.example.frontend.NetworkConfig
 import org.json.JSONArray
 
 
 @Composable
 fun Question11(onNextScreen: () -> Unit){
+    val ip= NetworkConfig.SERVER_IP
     val context = LocalContext.current
     val overlay_boolean= remember { mutableStateOf(false) }
     val speaker_boolean = remember { mutableStateOf(false) }
@@ -120,7 +122,7 @@ fun Question11(onNextScreen: () -> Unit){
             .build()
 
         val request = Request.Builder()
-            .url("http://192.168.1.9:5000/check_answers_q11")
+            .url("http://"+ip+"/check_answers_q11")
             .post(requestBody)
             .build()
 

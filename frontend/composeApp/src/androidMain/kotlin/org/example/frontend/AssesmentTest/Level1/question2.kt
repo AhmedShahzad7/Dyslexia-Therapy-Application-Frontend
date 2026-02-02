@@ -87,9 +87,11 @@ import okio.IOException
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.example.frontend.NetworkConfig
 
 @Composable
 fun Question2(onNextScreen: () -> Unit){
+    val ip= NetworkConfig.SERVER_IP
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val overlay_boolean= remember { mutableStateOf(false) }
@@ -130,7 +132,7 @@ fun Question2(onNextScreen: () -> Unit){
             .build()
 
         val request = Request.Builder()
-            .url(ip_address+"/predict_direction_mcq")
+            .url("http://"+ip+"/predict_direction_mcq")
             .post(requestBody)
             .build()
 

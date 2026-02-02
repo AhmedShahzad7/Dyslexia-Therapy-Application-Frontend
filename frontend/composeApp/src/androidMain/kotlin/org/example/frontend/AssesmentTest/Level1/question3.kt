@@ -88,9 +88,11 @@ import okio.IOException
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.example.frontend.NetworkConfig
 
 @Composable
 fun Question3(onNextScreen: () -> Unit){
+    val ip= NetworkConfig.SERVER_IP
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val overlay_boolean= remember { mutableStateOf(false) }
@@ -112,7 +114,7 @@ fun Question3(onNextScreen: () -> Unit){
 
     //FLASK HANDLE
     val question_number="3"
-    val ip_address="http://192.168.0.14:5000"
+
     fun sendDirectionToFlask(userid:String,arrow_selected:String ,onResult: (String) -> Unit) {
         val client = OkHttpClient()
         val requestBody = MultipartBody.Builder()
@@ -123,7 +125,7 @@ fun Question3(onNextScreen: () -> Unit){
             .build()
 
         val request = Request.Builder()
-            .url(ip_address+"/predict_direction_mcq")
+            .url("http://"+ip+"/predict_direction_mcq")
             .post(requestBody)
             .build()
 

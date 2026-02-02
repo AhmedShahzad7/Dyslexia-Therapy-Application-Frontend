@@ -100,6 +100,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.draw.alpha
 import kotlinx.coroutines.launch
+import org.example.frontend.NetworkConfig
 import kotlin.math.roundToInt
 
 
@@ -114,6 +115,7 @@ data class CardItem(
 
 @Composable
 fun Question12(){
+    val ip= NetworkConfig.SERVER_IP
     val context = LocalContext.current
     val overlay_boolean= remember { mutableStateOf(false) }
     val speaker_boolean = remember { mutableStateOf(false) }
@@ -190,7 +192,7 @@ fun Question12(){
             .build()
 
         val request = Request.Builder()
-            .url("http://192.168.10.108:5000/predict")
+            .url("http://"+ip+"/predict")
             .post(requestBody)
             .build()
 

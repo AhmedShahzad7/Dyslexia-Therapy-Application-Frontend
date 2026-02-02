@@ -70,6 +70,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okio.IOException
 import org.example.frontend.AssesmentTest.Level4.DrawingBox
+import org.example.frontend.NetworkConfig
 import java.io.ByteArrayOutputStream
 
 
@@ -77,6 +78,7 @@ import java.io.ByteArrayOutputStream
 fun Question8(onNextScreen:()->Unit,
     viewModelSmall: lettersViewModelSmall=androidx.lifecycle.viewmodel.compose.viewModel (),
 ){
+    val ip= NetworkConfig.SERVER_IP
     val context = LocalContext.current
     val waterSound = remember { WaterSoundPlayer(context) }
 
@@ -221,7 +223,7 @@ suspend fun sendImageToFlaskSuspend(
         .build()
 
     val request = Request.Builder()
-        .url("http://192.168.0.14:5000/predict_q8")
+        .url("http://"+ip+"/predict_q8")
         .post(requestBody)
         .build()
 

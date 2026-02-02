@@ -42,6 +42,7 @@ import com.google.firebase.auth.FirebaseAuth
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.example.frontend.NetworkConfig
 
 // Define Colors
 private val GreenText1 = Color(0xFF27B51A)
@@ -50,6 +51,8 @@ private val ErrorRed1 = Color(0xFFFF0000)
 
 @Composable
 fun Question5(onNextScreen: () -> Unit) {
+    val ip= NetworkConfig.SERVER_IP
+
     // --- STATE VARIABLES ---
     var popupMessage by remember { mutableStateOf("Click the left foot of the character below ?") }
 
@@ -80,7 +83,7 @@ fun Question5(onNextScreen: () -> Unit) {
             .build()
 
         val request = Request.Builder()
-            .url(ip_address + "/predict_q5")
+            .url("http://"+ip+"/predict_q5")
             .post(requestBody)
             .build()
 

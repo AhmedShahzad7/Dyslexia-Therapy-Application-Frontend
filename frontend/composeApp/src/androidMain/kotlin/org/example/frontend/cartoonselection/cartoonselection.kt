@@ -72,7 +72,7 @@ fun CartoonSelectionScreen(onNextScreen: () -> Unit) {
     var isSelectionLocked by remember { mutableStateOf(false) }
 
     // --- NETWORK CONFIG ---
-    val ip_address = "http:// 192.168.10.4:5000" // Emulator IP (Change to your PC IP for real device)
+    val ip_address = "http://192.168.1.9:5000" // Emulator IP (Change to your PC IP for real device)
 
     fun sendToFlask(cartoonName: String) {
         val currentUser = FirebaseAuth.getInstance().currentUser

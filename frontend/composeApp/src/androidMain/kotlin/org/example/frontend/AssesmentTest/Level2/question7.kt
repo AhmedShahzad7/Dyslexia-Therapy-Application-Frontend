@@ -65,11 +65,13 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okio.IOException
 import org.example.frontend.AssesmentTest.Level4.DrawingBox
+import org.example.frontend.NetworkConfig
 import java.io.ByteArrayOutputStream
 
 
 @Composable
 fun Question7(onNextScreen: ()->Unit){
+    val ip= NetworkConfig.SERVER_IP
     val context = LocalContext.current
     val overlay_boolean= remember { mutableStateOf(false) }
     val speaker_boolean = remember { mutableStateOf(false) }
@@ -126,7 +128,7 @@ fun Question7(onNextScreen: ()->Unit){
             .build()
 
         val request = Request.Builder()
-            .url("http://192.168.0.14:5000/predict_q7")
+            .url("http://"+ip+"/predict_q7")
             .post(requestBody)
             .build()
 

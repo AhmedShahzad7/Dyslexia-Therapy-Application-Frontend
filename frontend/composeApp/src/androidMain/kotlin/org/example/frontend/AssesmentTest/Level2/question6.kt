@@ -50,8 +50,11 @@ import okhttp3.Response
 import okio.IOException
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import org.example.frontend.NetworkConfig
+
 @Composable
 fun Question6(onNextScreen: () -> Unit){
+
     val context = LocalContext.current
     val overlay_boolean= remember { mutableStateOf(false) }
     val speaker_boolean = remember { mutableStateOf(false) }
@@ -319,9 +322,8 @@ fun wordboxesp(word: String, userid: String, modifier: Modifier = Modifier) {
     // Track the border color: Gray (default), Green (correct), Red (wrong)
     var borderColor by remember { mutableStateOf(Color.LightGray) }
     var isProcessing by remember { mutableStateOf(false) }
-
+    val ip= NetworkConfig.SERVER_IP
     val question_number="6"
-    val ip_address="http://192.168.0.17:5000"
     fun sendLetterToFlask(userid:String,letter: String,onResult: (String) -> Unit) {
         val client = OkHttpClient()
         val requestBody = MultipartBody.Builder()
@@ -332,7 +334,7 @@ fun wordboxesp(word: String, userid: String, modifier: Modifier = Modifier) {
             .build()
 
         val request = Request.Builder()
-            .url(ip_address+"/predict_q6")
+            .url("http://"+ip+"/predict_q6")
             .post(requestBody)
             .build()
 

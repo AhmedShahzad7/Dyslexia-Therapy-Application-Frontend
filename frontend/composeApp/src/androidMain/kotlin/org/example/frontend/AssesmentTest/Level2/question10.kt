@@ -53,6 +53,7 @@ import okhttp3.Request
 import okhttp3.Response
 import okio.IOException
 import org.example.frontend.AssesmentTest.Level4.wordboxes
+import org.example.frontend.NetworkConfig
 
 
 @Composable
@@ -60,7 +61,7 @@ fun Question10(onNextScreen:()->Unit){
     val context = LocalContext.current
     val overlay_boolean= remember { mutableStateOf(false) }
     val speaker_boolean = remember { mutableStateOf(false) }
-
+    val ip= NetworkConfig.SERVER_IP
     val imageLoader = remember {
         ImageLoader.Builder(context)
             .components {
@@ -353,9 +354,9 @@ fun wordboxesReversed(word: String, userid: String, modifier: Modifier = Modifie
     // Track the border color: Gray (default), Green (correct), Red (wrong)
     var borderColor by remember { mutableStateOf(Color.LightGray) }
     var isProcessing by remember { mutableStateOf(false) }
-
+    val ip= NetworkConfig.SERVER_IP
     val question_number="10"
-    val ip_address="http://192.168.0.14:5000"
+
     fun sendLetterToFlask(userid:String,letter: String,onResult: (String) -> Unit) {
         val client = OkHttpClient()
         val requestBody = MultipartBody.Builder()
@@ -366,7 +367,7 @@ fun wordboxesReversed(word: String, userid: String, modifier: Modifier = Modifie
             .build()
 
         val request = Request.Builder()
-            .url(ip_address+"/predict_q10")
+            .url("http://"+ip+"/predict_q10")
             .post(requestBody)
             .build()
 

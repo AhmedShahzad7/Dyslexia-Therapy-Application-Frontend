@@ -101,6 +101,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.draw.alpha
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
+import org.example.frontend.NetworkConfig
 import org.json.JSONArray
 import kotlin.math.roundToInt
 
@@ -109,6 +110,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun Question13(onNextScreen: () -> Unit){
+    val ip= NetworkConfig.SERVER_IP
     val context = LocalContext.current
     val overlay_boolean= remember { mutableStateOf(false) }
     val speaker_boolean = remember { mutableStateOf(false) }
@@ -146,7 +148,7 @@ fun Question13(onNextScreen: () -> Unit){
             .build()
 
         val request = Request.Builder()
-            .url("http://192.168.1.9:5000/check_answers_q11")
+            .url("http://"+ip+"/check_answers_q11")
             .post(requestBody)
             .build()
 

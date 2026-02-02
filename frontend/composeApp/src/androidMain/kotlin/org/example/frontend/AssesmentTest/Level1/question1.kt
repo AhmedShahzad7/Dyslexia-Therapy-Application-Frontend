@@ -88,12 +88,13 @@ import okio.IOException
 
 import android.os.Handler
 import android.os.Looper
+import org.example.frontend.NetworkConfig
 
 @Composable
 fun Question1(onNextScreen: () -> Unit){
     val context = LocalContext.current
     val waterSound = remember { WaterSoundPlayer(context) }
-
+    val ip= NetworkConfig.SERVER_IP
     DisposableEffect(Unit) {
         onDispose {
             waterSound.release()
@@ -162,7 +163,7 @@ fun Question1(onNextScreen: () -> Unit){
             .build()
 
         val request = Request.Builder()
-            .url("http://192.168.0.14:5000/predict_direction")
+            .url("http://"+ip+"/predict_direction")
             .post(requestBody)
             .build()
 

@@ -41,6 +41,7 @@ import android.os.Looper
 import android.widget.Toast
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
+import org.example.frontend.NetworkConfig
 import java.util.concurrent.TimeUnit
 
 // Define Colors
@@ -54,7 +55,7 @@ enum class Direction { UP, DOWN, LEFT, RIGHT }
 
 @Composable
 fun Question4(onNextScreen: () -> Unit) {
-
+    val ip= NetworkConfig.SERVER_IP
     // --- STATE VARIABLES ---
     var popupMessage by remember { mutableStateOf("Match the arrow to the correct word") }
 
@@ -92,7 +93,7 @@ fun Question4(onNextScreen: () -> Unit) {
             .build()
 
         val request = Request.Builder()
-            .url(ip_address + "/predict_q4")
+            .url("http://"+ip+"/predict_q4")
             .post(requestBody)
             .build()
 

@@ -35,6 +35,7 @@ import coil.request.ImageRequest
 import kotlinx.coroutines.delay
 import org.example.frontend.R
 import coil.ImageLoader
+import org.example.frontend.NetworkConfig
 
 
 @Composable
@@ -42,7 +43,7 @@ fun Question9(onNextScreen:()->Unit){
     val context = LocalContext.current
     val overlay_boolean= remember { mutableStateOf(false) }
     val speaker_boolean = remember { mutableStateOf(false) }
-
+    val ip= NetworkConfig.SERVER_IP
     val imageLoader = remember {
         ImageLoader.Builder(context)
             .components {
