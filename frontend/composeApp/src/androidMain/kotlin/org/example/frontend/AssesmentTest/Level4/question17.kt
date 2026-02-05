@@ -46,6 +46,7 @@ import kotlinx.coroutines.delay
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.example.frontend.NetworkConfig
 import org.example.frontend.R
 import java.io.ByteArrayOutputStream
 
@@ -69,7 +70,7 @@ fun createBitmapFromPaths(paths: List<Path>, size: Int): Bitmap {
 fun sendSentenceToFlask(userID: String, sentence: String, images: List<ByteArray>, onResult: (String) -> Unit) {
     val client = OkHttpClient()
     val multipartBuilder = MultipartBody.Builder().setType(MultipartBody.FORM)
-
+    val ip= NetworkConfig.SERVER_IP
     multipartBuilder.addFormDataPart("user_id", userID)
     multipartBuilder.addFormDataPart("target_sentence", sentence)
     multipartBuilder.addFormDataPart("question_number", "17")
@@ -83,7 +84,7 @@ fun sendSentenceToFlask(userID: String, sentence: String, images: List<ByteArray
 
     // Hardcoded URL as requested
     val request = Request.Builder()
-        .url("http://192.168.43.84:5000/predict_handwriting_sentence")
+        .url("http://"+ip+"/predict_handwriting_sentence")
         .post(multipartBuilder.build())
         .build()
 

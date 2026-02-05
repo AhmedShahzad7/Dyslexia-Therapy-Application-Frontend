@@ -37,7 +37,7 @@ import org.example.frontend.AssesmentTest.Level4.Question19 as Alvl4Q19
 import org.example.frontend.AssesmentTest.Level3.Question11 as Alvl3Q11
 import org.example.frontend.cartoonselection.CartoonSelectionScreen
 @Composable
-fun AppNavGraph(startDestination: String = "Alvl2Q10") {
+fun AppNavGraph(startDestination: String = "LoginScreen") {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = startDestination) {
@@ -45,7 +45,7 @@ fun AppNavGraph(startDestination: String = "Alvl2Q10") {
             // pass navigation callback or navController to screen
             LoginScreen(
                 navController = navController,onSignUpScreen = { navController.navigate("SignUpScreen") },
-                onassessmentScreen={navController.navigate("Alvl2Q6")}
+                onassessmentScreen={navController.navigate("Alvl4Q17")}
                 )
 
 
@@ -131,17 +131,15 @@ fun AppNavGraph(startDestination: String = "Alvl2Q10") {
             Alvl4Q16()
         }
         composable("Alvl4Q17") {
-            Alvl4Q17()
+            Alvl4Q17(onNextScreen = { navController.navigate("Alvl4Q18")})
         }
         composable("Alvl4Q18") {
-            Alvl4Q18()
+            Alvl4Q18(onNextScreen = { navController.navigate("Alvl4Q19")})
         }
         composable("Alvl4Q19") {
-            Alvl4Q19()
+            Alvl4Q19(onNextScreen = { navController.navigate("CartoonSelectionScreen")})
         }
-        composable("Alvl4Q19") {
-            Alvl4Q19()
-        }
+
         composable("CartoonSelectionScreen") {
             CartoonSelectionScreen(onNextScreen = { navController.navigate("HomeScreen") })
         }

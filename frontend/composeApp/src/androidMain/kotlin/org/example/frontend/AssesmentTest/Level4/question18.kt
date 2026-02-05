@@ -42,6 +42,7 @@ import coil.request.ImageRequest
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import okhttp3.*
+import org.example.frontend.NetworkConfig
 import org.example.frontend.R
 import java.io.IOException
 
@@ -64,7 +65,7 @@ fun Question18(onNextScreen: () -> Unit) {
     // --- FLASK FUNCTION ---
     fun sendDataToFlask(userId: String, selectedWords: List<String>) {
         val client = OkHttpClient()
-
+        val ip= NetworkConfig.SERVER_IP
         // Manual JSON conversion: ["word1", "word2"]
         val jsonAnswers = selectedWords.joinToString(prefix = "[", postfix = "]", separator = ",") { "\"$it\"" }
 
@@ -76,7 +77,7 @@ fun Question18(onNextScreen: () -> Unit) {
             .build()
 
         val request = Request.Builder()
-            .url("$ip_address/check_answers_q18")
+            .url("http://"+ip+"/check_answers_q18")
             .post(requestBody)
             .build()
 
