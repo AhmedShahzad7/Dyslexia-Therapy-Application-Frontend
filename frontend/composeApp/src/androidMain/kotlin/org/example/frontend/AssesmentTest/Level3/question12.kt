@@ -1,126 +1,80 @@
 package org.example.frontend.AssesmentTest.Level3
 
+import android.Manifest
+import android.content.Context
+import android.graphics.Bitmap
+import android.media.MediaPlayer
+import android.media.MediaRecorder
+import android.os.Build
+import android.os.Build.VERSION.SDK_INT
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.graphicsLayer
-import org.example.frontend.R
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.tooling.preview.Preview
-import kotlinx.coroutines.delay
-import androidx.compose.material3.Button
-import androidx.compose.ui.platform.LocalContext
-import coil.compose.AsyncImage
 import coil.ImageLoader
+import coil.compose.AsyncImage
+import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
-import android.os.Build.VERSION.SDK_INT
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.IconButton
-import coil.decode.GifDecoder
-import android.graphics.Bitmap
-import android.util.Log
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.asAndroidPath
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp
-import android.media.MediaPlayer
-import androidx.compose.ui.draw.shadow
-import java.io.ByteArrayOutputStream
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Call
-import okhttp3.Callback
-import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
-import okio.IOException
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.offset
-import androidx.compose.runtime.*
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntOffset
-import kotlin.math.roundToInt
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch //
-
-
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.ui.draw.alpha
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.example.frontend.NetworkConfig
+import org.example.frontend.R
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.IOException
 import kotlin.math.roundToInt
-
 
 data class CardItem(
     val id: Int,
     val word: String,
 )
 
-
-
-
-
 @Composable
-fun Question12(){
-    val ip= NetworkConfig.SERVER_IP
+fun Question12() {
+    val ip = NetworkConfig.SERVER_IP
     val context = LocalContext.current
-    val overlay_boolean= remember { mutableStateOf(false) }
+    val overlay_boolean = remember { mutableStateOf(false) }
     val speaker_boolean = remember { mutableStateOf(false) }
-    val part_boolean= remember { mutableStateOf(false) }
-    val play_boolean=remember{mutableStateOf(false)}
+    val part_boolean = remember { mutableStateOf(false) }
+    val play_boolean = remember { mutableStateOf(false) }
     val cards = remember {
         mutableStateListOf(
             CardItem(1, "deb"),
@@ -133,8 +87,26 @@ fun Question12(){
         )
     }
 
+    // --- AUDIO & NETWORK STATES ---
+    val audioRecorder = remember { AudioRecorderHelper(context) }
+    var recordedFile by remember { mutableStateOf<File?>(null) }
+    var isProcessing by remember { mutableStateOf(false) }
+    var transcriptionText by remember { mutableStateOf("") }
 
-    //GIPHY HANDLER
+    // Permission Launcher for Microphone
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                play_boolean.value = true
+                audioRecorder.startRecording()
+            } else {
+                Log.e("Audio", "Microphone permission denied")
+            }
+        }
+    )
+
+    // GIPHY HANDLER
     val imageLoader = remember {
         ImageLoader.Builder(context)
             .components {
@@ -146,73 +118,9 @@ fun Question12(){
             }
             .build()
     }
-    //CANVA HANDLE
-    val paths = remember { mutableStateListOf<Path>() }
-    var currentPath by remember { mutableStateOf<Path?>(null) }
-    val density = LocalDensity.current
-    val targetPixels = 250
-    val boxSizeDp =250.dp
-    val boxSizePx = with(density) { targetPixels.dp.toPx().toInt() }
 
-    fun createBitmapFromPaths(paths: List<Path>, width: Int, height: Int): Bitmap {
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = android.graphics.Canvas(bitmap)
-        canvas.drawColor(android.graphics.Color.WHITE)
-        val paint = android.graphics.Paint().apply {
-            color = android.graphics.Color.BLACK
-            style = android.graphics.Paint.Style.STROKE
-            strokeWidth = 10f // Thicker lines show up better after resizing
-            isAntiAlias = true
-            strokeJoin = android.graphics.Paint.Join.ROUND
-            strokeCap = android.graphics.Paint.Cap.ROUND
-        }
-
-        paths.forEach { composePath ->
-            canvas.drawPath(composePath.asAndroidPath(), paint)
-        }
-
-        return bitmap
-    }
-
-    fun bitmapToByteArray(bitmap: Bitmap): ByteArray {
-        val stream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-        return stream.toByteArray()
-    }
-
-    fun sendImageToFlask(byteArray: ByteArray, onResult: (String) -> Unit) {
-        val client = OkHttpClient()
-        val requestBody = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart(
-                "file",
-                "image.png",
-                byteArray.toRequestBody("image/png".toMediaTypeOrNull())
-            )
-            .build()
-
-        val request = Request.Builder()
-            .url("http://"+ip+"/predict")
-            .post(requestBody)
-            .build()
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Log.e("FlaskAPI", "Error! ${e.message}", e)
-                onResult("Error: ${e.message}")
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                val result = response.body?.string() ?: "No response"
-                Log.d("FlaskAPI", "Response: $result")
-                onResult(result)
-            }
-        })
-    }
-
-
-    //PRESSING SPEAKER FUNCTION
-    fun Clicked_Speaker(){
+    // PRESSING SPEAKER FUNCTION
+    fun Clicked_Speaker() {
         overlay_boolean.value = true
         speaker_boolean.value = true
     }
@@ -228,66 +136,47 @@ fun Question12(){
             speaker_boolean.value = false
         }
     }
-    //PRESSED OPTION FUNCTION
-    fun Clicked_Option(){
-        part_boolean.value = true
-    }
 
-    //CARD EFFECT
+    // CARD EFFECT
     var autoDismissTop by remember { mutableStateOf(false) }
     LaunchedEffect(cards.size) {
         if (cards.isNotEmpty()) {
             autoDismissTop = false
-            delay(2000) // ⏱ placeholder delay
+            delay(2000)
             autoDismissTop = false
         }
     }
 
-
-    //CARD PLAY BUTTON   //REMINDER TO ADD ID PARAMETER FOR BACKEND
-    fun Clicked_Play(){
-        if(!play_boolean.value){
-            play_boolean.value = true
-        }else{
-            play_boolean.value = false
-        }
-
-    }
-
-
-
-    //DESIGN
+    // DESIGN
     Box(
-        modifier=Modifier.fillMaxSize(),
-    ){
+        modifier = Modifier.fillMaxSize(),
+    ) {
         Image(
-            painter=painterResource(R.drawable.assessment_level1q3),
+            painter = painterResource(R.drawable.assessment_level1q3),
             contentDescription = "",
             contentScale = ContentScale.FillBounds,
             modifier = Modifier.fillMaxSize()
         )
 
-
-        //Original Screen
+        // Original Screen
         Box(
-            modifier=Modifier
+            modifier = Modifier
                 .width(299.dp)
                 .height(550.dp)
                 .background(color = Color(0xC7FFFFFF), shape = RoundedCornerShape(size = 35.dp))
                 .align(Alignment.Center)
-        ){
+        ) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterVertically),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                //Question Row
+                // Question Row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(100.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
-
                 ) {
                     Text(
                         text = "Question no 12",
@@ -300,7 +189,8 @@ fun Question12(){
                         )
                     )
                 }
-                //Intruction Row
+
+                // Instruction Row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -318,30 +208,20 @@ fun Question12(){
                             textAlign = TextAlign.Center,
                         )
                     )
-                    //Speaker Button
-                    Box(
-                        modifier = Modifier.offset(x = 10.dp)
-                    ) {
-                        IconButton(
-                            onClick = {
-                                Clicked_Speaker()
-                            }
-                        ) {
+                    // Speaker Button
+                    Box(modifier = Modifier.offset(x = 10.dp)) {
+                        IconButton(onClick = { Clicked_Speaker() }) {
                             Image(
-                                modifier = Modifier
-                                    .width(35.dp)
-                                    .height(35.dp),
+                                modifier = Modifier.size(35.dp),
                                 painter = painterResource(id = R.drawable.sound_button),
-                                contentDescription = "selected checkmark",
+                                contentDescription = "Speaker",
                                 contentScale = ContentScale.None
                             )
                         }
                     }
                 }
 
-
-//CARD BOX
-
+                // CARD BOX
                 Box(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.TopCenter
@@ -351,34 +231,26 @@ fun Question12(){
                         SwipeCard(
                             modifier = Modifier
                                 .graphicsLayer {
-                                    // Slight scale for cards underneath
                                     val scale = if (isTopCard) 1f else 0.95f
                                     scaleX = scale
                                     scaleY = scale
-
-                                    // Push lower cards slightly down
                                     translationY = (cards.lastIndex - index) * 10f
                                 },
                             onDismiss = {
                                 if (isTopCard) {
-
                                     cards.remove(card)
-                                    if (cards.isEmpty()) {
-                                            // onNextPage()
-                                    }
+                                    // if (cards.isEmpty()) onNextPage()
                                 }
                             },
                             autoDismiss = isTopCard && autoDismissTop,
                         ) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                            ){
+                            ) {
                                 Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(55.dp),
+                                    modifier = Modifier.fillMaxWidth().height(55.dp),
                                     horizontalArrangement = Arrangement.Center,
-                                ){
+                                ) {
                                     Text(
                                         text = card.word,
                                         style = TextStyle(
@@ -391,170 +263,104 @@ fun Question12(){
                                     )
                                 }
 
-                                if(!play_boolean.value){
-                                    //PLAY Button
+                                if (!play_boolean.value) {
+                                    // PLAY (RECORD) Button
                                     Row(
-                                        modifier=Modifier.fillMaxWidth().height(150.dp),
+                                        modifier = Modifier.fillMaxWidth().height(150.dp),
                                         horizontalArrangement = Arrangement.Center
-                                    ){
-                                        Box(
+                                    ) {
+                                        IconButton(
+                                            onClick = {
+                                                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                            },
+                                            modifier = Modifier.size(110.dp)
                                         ) {
-                                            IconButton(
-                                                onClick = {
-                                                    //REMINDER TO ADD ID PARAMETER FOR BACKEND
-                                                    Clicked_Play()
-                                                },
-                                                modifier=Modifier.size(110.dp)
-                                            ) {
-                                                Image(
-                                                    modifier = Modifier
-                                                        .width(110.dp)
-                                                        .height(110.dp),
-                                                    painter = painterResource(id = R.drawable.play_btn),
-                                                    contentDescription = "selected checkmark",
-                                                    contentScale = ContentScale.None
-                                                )
-                                            }
+                                            Image(
+                                                modifier = Modifier.size(110.dp),
+                                                painter = painterResource(id = R.drawable.play_btn),
+                                                contentDescription = "Start Recording",
+                                                contentScale = ContentScale.None
+                                            )
                                         }
                                     }
-                                }else{
-                                    //PAUSE Button
+                                } else {
+                                    // PAUSE (STOP) Button
                                     Row(
-                                        modifier=Modifier.fillMaxWidth().height(150.dp),
+                                        modifier = Modifier.fillMaxWidth().height(150.dp),
                                         horizontalArrangement = Arrangement.Center
-                                    ){
-                                        Box(
+                                    ) {
+                                        IconButton(
+                                            onClick = {
+                                                play_boolean.value = false
+                                                recordedFile = audioRecorder.stopRecording()
+                                            },
+                                            modifier = Modifier.size(110.dp)
                                         ) {
-                                            IconButton(
-                                                onClick = {
-                                                    //REMINDER TO ADD ID PARAMETER FOR BACKEND
-                                                    Clicked_Play()
-                                                },
-                                                modifier=Modifier.size(110.dp)
-                                            ) {
-                                                Image(
-                                                    modifier = Modifier
-                                                        .width(110.dp)
-                                                        .height(110.dp),
-                                                    painter = painterResource(id = R.drawable.pause_btn),
-                                                    contentDescription = "selected checkmark",
-                                                    contentScale = ContentScale.None
-                                                )
-                                            }
+                                            Image(
+                                                modifier = Modifier.size(110.dp),
+                                                painter = painterResource(id = R.drawable.pause_btn),
+                                                contentDescription = "Stop Recording",
+                                                contentScale = ContentScale.None
+                                            )
                                         }
                                     }
-
                                 }
 
-
-                                //SUBMIT BUTTON
-
-                                Row(){
+                                // SUBMIT BUTTON
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
                                     Box(
-                                        modifier=Modifier
+                                        modifier = Modifier
                                             .width(150.dp)
                                             .height(50.dp)
                                             .background(color = Color(0xF527B51A), shape = RoundedCornerShape(size = 35.dp))
-                                            .padding(start = 10.dp, top = 10.dp, end = 10.dp, bottom = 10.dp),
+                                            .clickable(enabled = !isProcessing && recordedFile != null) {
+                                                isProcessing = true
+                                                recordedFile?.let { file ->
+                                                    uploadAudioForTranscription(file, ip) { result ->
+                                                        isProcessing = false
+                                                        transcriptionText = result ?: "Error"
+                                                        Log.d("FlaskAPI", "WhisperX Result: $transcriptionText")
+                                                    }
+                                                }
+                                            }
+                                            .padding(10.dp),
                                         contentAlignment = Alignment.Center
-                                    ){
+                                    ) {
                                         Text(
-                                            text = "Submit",
+                                            text = if (isProcessing) "Sending..." else "Submit",
                                             style = TextStyle(
                                                 fontSize = 24.sp,
                                                 fontFamily = FontFamily(Font(R.font.windsol)),
                                                 fontWeight = FontWeight(400),
-                                                color = Color(0xFFFFFFFF),
+                                                color = Color.White,
                                                 textAlign = TextAlign.Center,
                                             )
                                         )
-
-
                                     }
-
-
                                 }
-
-
-
-
                             }
-
-
-
                         }
                     }
                 }
+            }
+        }
 
-
-
-
-
-
-
-
-
-
-
-
-            }//END OF MIDDLE BOX
-//            Box(
-//                modifier = Modifier
-//                    .align(Alignment.BottomEnd) // Position at Bottom Right of the Blur Box
-//                    .padding(end = 10.dp, bottom = 10.dp) // Add spacing from the edges
-//                    .background(Color(0xFF27B51A), RoundedCornerShape(15.dp)) // Green bg
-//                    .clickable {
-////                        // 1. Convert drawing to bitmap
-////                        val bitmap = createBitmapFromPaths(paths, boxSizePx, boxSizePx)
-////                        val byteArray = bitmapToByteArray(bitmap)
-////
-////                        // 2. Send to Flask API
-////                        sendImageToFlask(byteArray) { result ->
-////                            Log.d("API_RESULT", result)
-////                        }
-//
-//                        // 3. Navigate to next screen
-////                        onNextScreen()
-//                    }
-//                    .padding(horizontal = 20.dp, vertical = 5.dp) // Padding inside the button
-//            ) {
-//                Text(
-//                    text = "Next",
-//                    style = TextStyle(
-//                        fontSize = 26.sp,
-//                        fontFamily = FontFamily(Font(R.font.windsol)),
-//                        fontWeight = FontWeight.Bold,
-//                        color = Color.White
-//                    )
-//                )
-//            }
-        } //END OF ORIGINAL SCREEN
-
-
-        //GREY OVERLAY HANDLED BY IF STATEMENT
-        if(overlay_boolean.value){
+        // GREY OVERLAY HANDLED BY IF STATEMENT
+        if (overlay_boolean.value) {
             Box(
-                modifier=Modifier
-                    .offset(x = 0.dp, y = 0.dp)
-                    .width(430.dp)
-                    .height(932.dp)
-                    .background(color = Color(0x4FFFFFFF))
+                modifier = Modifier
                     .fillMaxSize()
-
-            ){
-                //Speech Bubble Location
+                    .background(color = Color(0x4FFFFFFF))
+            ) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(color = Color(0x4FFFFFFF))
-
+                    modifier = Modifier.fillMaxSize().background(color = Color(0x4FFFFFFF))
                 ) {
-                    // --- SPEECH BUBBLE (Center Right) ---
                     Box(
                         contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .offset(y = -120.dp)
+                        modifier = Modifier.align(Alignment.CenterEnd).offset(y = (-120).dp)
                     ) {
                         Image(
                             painter = painterResource(R.drawable.speech_bubble),
@@ -571,35 +377,24 @@ fun Question12(){
                             )
                         )
                     }
-                    // --- DORAEMON (Bottom Left) ---
                     AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(R.drawable.doraemon2)
-                            .build(),
+                        model = ImageRequest.Builder(context).data(R.drawable.doraemon2).build(),
                         imageLoader = imageLoader,
                         contentDescription = "Doraemon GIF",
                         contentScale = ContentScale.FillBounds,
                         modifier = Modifier
                             .width(327.dp)
                             .height(327.dp)
-                            .offset(y = -120.dp)
+                            .offset(y = (-120).dp)
                             .align(Alignment.BottomStart)
                     )
                 }
             }
-
-
         }
-
-
-    } //END OF PAGE BOX
+    }
 }
 
-
-
-
-//SSWIPE CARD COMPONENT
-
+// SWIPE CARD COMPONENT
 @Composable
 fun SwipeCard(
     modifier: Modifier = Modifier,
@@ -610,33 +405,21 @@ fun SwipeCard(
     content: @Composable BoxScope.() -> Unit
 ) {
     val scope = rememberCoroutineScope()
-
     val offsetX = remember { Animatable(0f) }
     val offsetY = remember { Animatable(0f) }
     val alpha = remember { Animatable(1f) }
-    var autoDismissTop by remember { mutableStateOf(false) }
+
     LaunchedEffect(autoDismiss) {
         if (autoDismiss) {
-            offsetX.animateTo(
-                targetValue = 800f, // slide right
-                animationSpec = tween(300)
-            )
-            alpha.animateTo(
-                targetValue = 0f,
-                animationSpec = tween(300)
-            )
+            offsetX.animateTo(targetValue = 800f, animationSpec = tween(300))
+            alpha.animateTo(targetValue = 0f, animationSpec = tween(300))
             delay(300)
             onDismiss()
         }
     }
     Row(
         modifier = modifier
-            .offset {
-                IntOffset(
-                    offsetX.value.roundToInt(),
-                    offsetY.value.roundToInt()
-                )
-            }
+            .offset { IntOffset(offsetX.value.roundToInt(), offsetY.value.roundToInt()) }
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
                 detectDragGestures(
@@ -649,23 +432,11 @@ fun SwipeCard(
                     onDragEnd = {
                         scope.launch {
                             if (kotlin.math.abs(offsetX.value) > swipeThreshold) {
-                                // Dismiss
-                                launch {
-                                    offsetX.animateTo(
-                                        targetValue = offsetX.value * 3,
-                                        animationSpec = tween(300)
-                                    )
-                                }
-                                launch {
-                                    alpha.animateTo(
-                                        targetValue = 0f,
-                                        animationSpec = tween(300)
-                                    )
-                                }
+                                launch { offsetX.animateTo(targetValue = offsetX.value * 3, animationSpec = tween(300)) }
+                                launch { alpha.animateTo(targetValue = 0f, animationSpec = tween(300)) }
                                 delay(300)
                                 onDismiss()
                             } else {
-                                // Snap back
                                 offsetX.animateTo(0f, tween(300))
                                 offsetY.animateTo(0f, tween(300))
                             }
@@ -677,27 +448,79 @@ fun SwipeCard(
         Box(
             modifier = Modifier
                 .alpha(alpha.value)
-                .shadow(
-                    elevation = 25.dp,
-                    spotColor = Color(0x40000000),
-                    ambientColor = Color(0x40000000)
-                )
+                .shadow(elevation = 25.dp, spotColor = Color(0x40000000), ambientColor = Color(0x40000000))
                 .width(259.dp)
-                .height(294.55463.dp)
-                .background(
-                    color = Color(0xE5FFFFFF),
-                    shape = RoundedCornerShape(35.dp)
-                )
+                .height(294.5.dp)
+                .background(color = Color(0xE5FFFFFF), shape = RoundedCornerShape(35.dp))
                 .padding(10.dp),
             content = content
         )
     }
 }
 
+// --- NETWORK HELPER FOR AUDIO ---
+fun uploadAudioForTranscription(audioFile: File, serverIp: String, onResult: (String?) -> Unit) {
+    val client = OkHttpClient()
+    val requestBody = MultipartBody.Builder()
+        .setType(MultipartBody.FORM)
+        .addFormDataPart(
+            "audio",
+            audioFile.name,
+            audioFile.asRequestBody("audio/wav".toMediaTypeOrNull())
+        )
+        .build()
 
+    val request = Request.Builder()
+        .url("http://$serverIp/transcribe")
+        .post(requestBody)
+        .build()
 
+    client.newCall(request).enqueue(object : Callback {
+        private fun runOnMainThread(action: () -> Unit) {
+            Handler(Looper.getMainLooper()).post(action)
+        }
+        override fun onFailure(call: Call, e: IOException) {
+            e.printStackTrace()
+            runOnMainThread { onResult("Network Error: ${e.localizedMessage}") }
+        }
+        override fun onResponse(call: Call, response: Response) {
+            val responseData = response.body?.string()
+            runOnMainThread {
+                if (response.isSuccessful) onResult(responseData)
+                else onResult("Server error: ${response.code}\n$responseData")
+            }
+        }
+    })
+}
 
+// --- AUDIO RECORDER HELPER ---
+class AudioRecorderHelper(private val context: Context) {
+    private var recorder: MediaRecorder? = null
+    private var audioFile: File? = null
 
+    fun startRecording() {
+        audioFile = File(context.cacheDir, "temp_speech.wav")
+        recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            MediaRecorder(context)
+        } else {
+            @Suppress("DEPRECATION")
+            MediaRecorder()
+        }.apply {
+            setAudioSource(MediaRecorder.AudioSource.MIC)
+            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            setOutputFile(audioFile?.absolutePath)
+            prepare()
+            start()
+        }
+    }
 
-
-
+    fun stopRecording(): File? {
+        recorder?.apply {
+            try { stop() } catch (e: Exception) { e.printStackTrace() }
+            release()
+        }
+        recorder = null
+        return audioFile
+    }
+}
