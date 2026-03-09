@@ -49,6 +49,7 @@ import coil.compose.AsyncImage
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okhttp3.*
@@ -317,12 +318,27 @@ fun Question12() {
                                             .height(50.dp)
                                             .background(color = Color(0xF527B51A), shape = RoundedCornerShape(size = 35.dp))
                                             .clickable(enabled = !isProcessing && recordedFile != null) {
-                                                isProcessing = true
-                                                recordedFile?.let { file ->
-                                                    uploadAudioForTranscription(file, ip) { result ->
-                                                        isProcessing = false
-                                                        transcriptionText = result ?: "Error"
-                                                        Log.d("FlaskAPI", "WhisperX Result: $transcriptionText")
+                                                val currentUser = FirebaseAuth.getInstance().currentUser
+                                                if (currentUser != null) {
+                                                    val userId = currentUser.uid
+
+
+                                                    isProcessing = true
+                                                    recordedFile?.let { file ->
+                                                        uploadAudioForTranscription(file, ip, card.word, userId) { result ->
+                                                            isProcessing = false
+                                                            transcriptionText = result ?: "Error"
+                                                            Log.d(
+                                                                "FlaskAPI",
+                                                                "Phonetic Match Result: $transcriptionText"
+                                                            )
+
+                                                            // Check if the result JSON contains "is_correct": true
+                                                            if (transcriptionText.contains("\"is_correct\": true")) {
+                                                                autoDismissTop =
+                                                                    true // Swipe the card away automatically!
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
@@ -458,41 +474,63 @@ fun SwipeCard(
     }
 }
 
-// --- NETWORK HELPER FOR AUDIO ---
-fun uploadAudioForTranscription(audioFile: File, serverIp: String, onResult: (String?) -> Unit) {
-    val client = OkHttpClient()
-    val requestBody = MultipartBody.Builder()
-        .setType(MultipartBody.FORM)
-        .addFormDataPart(
-            "audio",
-            audioFile.name,
-            audioFile.asRequestBody("audio/wav".toMediaTypeOrNull())
-        )
-        .build()
+// --- NETWORK HELPER FOR AUDIO (PHONETIC FUZZY MATCHING) ---
+fun uploadAudioForTranscription(
+    audioFile: File,
+    serverIp: String,
+    targetWord: String, // <-- Added targetWord parameter
+    userId:String,
 
-    val request = Request.Builder()
-        .url("http://$serverIp/transcribe")
-        .post(requestBody)
-        .build()
+    onResult: (String?) -> Unit
+) {
+    try {
+        val client = OkHttpClient()
 
-    client.newCall(request).enqueue(object : Callback {
-        private fun runOnMainThread(action: () -> Unit) {
-            Handler(Looper.getMainLooper()).post(action)
-        }
-        override fun onFailure(call: Call, e: IOException) {
-            e.printStackTrace()
-            runOnMainThread { onResult("Network Error: ${e.localizedMessage}") }
-        }
-        override fun onResponse(call: Call, response: Response) {
-            val responseData = response.body?.string()
-            runOnMainThread {
-                if (response.isSuccessful) onResult(responseData)
-                else onResult("Server error: ${response.code}\n$responseData")
+        // Add BOTH the audio file and the target word to the form
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("target_word", targetWord) // Sending the word to Flask
+            .addFormDataPart(
+                "audio",
+                audioFile.name,
+                audioFile.asRequestBody("audio/wav".toMediaTypeOrNull())
+            )
+            .addFormDataPart("user_id", userId)
+            .addFormDataPart("question_number", "12")
+
+            .build()
+
+        val baseUrl = if (serverIp.startsWith("http")) serverIp else "http://$serverIp"
+
+        // Pointing to the new route we just created!
+        val request = Request.Builder()
+            .url("$baseUrl/transcribe_and_score")
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            private fun runOnMainThread(action: () -> Unit) {
+                Handler(Looper.getMainLooper()).post(action)
             }
+            override fun onFailure(call: Call, e: IOException) {
+                e.printStackTrace()
+                runOnMainThread { onResult("Network Error: ${e.localizedMessage}") }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                val responseData = response.body?.string()
+                runOnMainThread {
+                    if (response.isSuccessful) onResult(responseData)
+                    else onResult("Server error: ${response.code}\n$responseData")
+                }
+            }
+        })
+    } catch (e: Exception) {
+        e.printStackTrace()
+        Handler(Looper.getMainLooper()).post {
+            onResult("App Error: ${e.message}")
         }
-    })
+    }
 }
-
 // --- AUDIO RECORDER HELPER ---
 class AudioRecorderHelper(private val context: Context) {
     private var recorder: MediaRecorder? = null
