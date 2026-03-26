@@ -1,11 +1,17 @@
 package org.example.frontend.AssesmentTest.Level4
 
+import android.Manifest
+import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaPlayer
+import android.media.MediaRecorder
+import android.os.Build
 import android.os.Build.VERSION.SDK_INT
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -28,7 +34,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -46,12 +51,106 @@ import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.example.frontend.NetworkConfig
 import org.example.frontend.R
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.IOException
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.runtime.key
+// --- AUDIO RECORDER HELPER ---
 
-// --- HELPER FUNCTIONS ---
+// --- AUDIO RECORDER HELPER ---
+class AudioRecorderHelperQ19(private val context: Context) {
+    private var recorder: MediaRecorder? = null
+    private var audioFile: File? = null
+
+    fun startRecording() {
+        audioFile = File(context.cacheDir, "temp_speech.wav")
+        recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            MediaRecorder(context)
+        } else {
+            @Suppress("DEPRECATION")
+            MediaRecorder()
+        }.apply {
+            setAudioSource(MediaRecorder.AudioSource.MIC)
+            // UPDATED: Changed to THREE_GPP and AMR_NB for better AI transcription compatibility
+            setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
+            setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+            setOutputFile(audioFile?.absolutePath)
+            prepare()
+            start()
+        }
+    }
+
+    fun stopRecording(): File? {
+        try {
+            recorder?.stop()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            recorder?.release()
+            recorder = null
+        }
+        return audioFile
+    }
+}
+
+// --- NETWORK HELPER FOR AUDIO (PHONETIC FUZZY MATCHING) ---
+fun uploadAudioForTranscription(
+    audioFile: File,
+    serverIp: String,
+    targetWord: String,
+    userId: String,
+    onResult: (String?) -> Unit
+) {
+    try {
+        val client = OkHttpClient()
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("target_word", targetWord)
+            .addFormDataPart(
+                "audio",
+                audioFile.name,
+                audioFile.asRequestBody("audio/wav".toMediaTypeOrNull())
+            )
+            .addFormDataPart("user_id", userId)
+            .addFormDataPart("question_number", "19")
+            .build()
+
+        val baseUrl = if (serverIp.startsWith("http")) serverIp else "http://$serverIp"
+
+        val request = Request.Builder()
+            .url("$baseUrl/transcribe_and_score")
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            private fun runOnMainThread(action: () -> Unit) {
+                Handler(Looper.getMainLooper()).post(action)
+            }
+            override fun onFailure(call: Call, e: IOException) {
+                e.printStackTrace()
+                runOnMainThread { onResult("Network Error: ${e.localizedMessage}") }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                val responseData = response.body?.string()
+                runOnMainThread {
+                    if (response.isSuccessful) onResult(responseData)
+                    else onResult("Server error: ${response.code}\n$responseData")
+                }
+            }
+        })
+    } catch (e: Exception) {
+        e.printStackTrace()
+        Handler(Looper.getMainLooper()).post { onResult("App Error: ${e.message}") }
+    }
+}
+
+// --- HANDWRITING HELPER FUNCTIONS ---
 fun createBitmapFromPathsQ19(paths: List<Path>, size: Int): Bitmap {
     val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
     val canvas = android.graphics.Canvas(bitmap)
@@ -71,7 +170,7 @@ fun createBitmapFromPathsQ19(paths: List<Path>, size: Int): Bitmap {
 fun sendSentenceToFlaskQ19(userID: String, sentence: String, images: List<ByteArray>, onResult: (String) -> Unit) {
     val client = OkHttpClient()
     val multipartBuilder = MultipartBody.Builder().setType(MultipartBody.FORM)
-    val ip= NetworkConfig.SERVER_IP
+    val ip = NetworkConfig.SERVER_IP
     multipartBuilder.addFormDataPart("user_id", userID)
     multipartBuilder.addFormDataPart("target_sentence", sentence)
     multipartBuilder.addFormDataPart("question_number", "19")
@@ -84,7 +183,7 @@ fun sendSentenceToFlaskQ19(userID: String, sentence: String, images: List<ByteAr
     }
 
     val request = Request.Builder()
-        .url("http://"+ip+"/predict_handwriting_sentence")
+        .url("http://" + ip + "/predict_handwriting_sentence")
         .post(multipartBuilder.build())
         .build()
 
@@ -106,6 +205,24 @@ fun Question19(onNextScreen: () -> Unit) {
     val overlay_boolean = remember { mutableStateOf(false) }
     val speaker_boolean = remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
+
+    // --- AUDIO STATES ---
+    val audioRecorder = remember { AudioRecorderHelperQ19(context) }
+    var recordedFile by remember { mutableStateOf<File?>(null) }
+    var isRecording by remember { mutableStateOf(false) }
+
+    // Permission Launcher for Microphone
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                isRecording = true
+                audioRecorder.startRecording()
+            } else {
+                Log.e("Audio", "Microphone permission denied")
+            }
+        }
+    )
 
     val imageLoader = remember {
         ImageLoader.Builder(context)
@@ -146,16 +263,13 @@ fun Question19(onNextScreen: () -> Unit) {
 
     val currentQuestionSentenceString = questionsentences[currentindexquestion.value]
     val lettersOnlyQuestion = currentQuestionSentenceString.filter { it.isLetter() }
-    val density = LocalDensity.current
-    val targetPixels = 64
-    val boxSizeDp = 64.dp
-    val boxSizePx = with(density) { targetPixels.dp.toPx().toInt() }
     val isplayingquestion = remember { mutableStateOf(false) }
 
     // Backend drawing state
     val drawingState = remember { mutableStateMapOf<Int, List<Path>>() }
     LaunchedEffect(currentindexquestion.value) {
         drawingState.clear()
+        recordedFile = null // Clear audio file reference on new question
     }
 
     Box(
@@ -168,7 +282,6 @@ fun Question19(onNextScreen: () -> Unit) {
             contentScale = ContentScale.FillBounds,
             modifier = Modifier.fillMaxSize()
         )
-
 
         Box(
             modifier = Modifier
@@ -203,8 +316,7 @@ fun Question19(onNextScreen: () -> Unit) {
                             fontWeight = FontWeight(400),
                             color = Color(0xF527B51A),
                             textAlign = TextAlign.Center,
-
-                            )
+                        )
                     )
                 }
                 Row(
@@ -230,26 +342,23 @@ fun Question19(onNextScreen: () -> Unit) {
                                 textAlign = TextAlign.Center,
                             )
                         )
+
                         Box(
                             modifier = Modifier.align(Alignment.CenterVertically)
                         ) {
-                            IconButton(
-                                onClick = {
-                                    Clicked_Speaker()
+                            Row {
+                                IconButton(onClick = { Clicked_Speaker() }) {
+                                    Image(
+                                        modifier = Modifier.size(35.dp),
+                                        painter = painterResource(id = R.drawable.sound_button),
+                                        contentDescription = "speaker"
+                                    )
                                 }
-                            ) {
-                                Image(
-                                    modifier = Modifier
-                                        .width(35.dp)
-                                        .height(35.dp),
-                                    painter = painterResource(id = R.drawable.sound_button),
-                                    contentDescription = "selected checkmark",
-                                    contentScale = ContentScale.None
-                                )
                             }
                         }
                     }
                 }
+
                 Box(
                     Modifier
                         .shadow(
@@ -289,28 +398,40 @@ fun Question19(onNextScreen: () -> Unit) {
                                 modifier = Modifier.weight(1f, fill = false)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
+
+                            // Recording visual indicator
+                            if (isRecording) {
+                                Text("🔴 Recording...", color = Color.Red, fontSize = 12.sp)
+                            }
+                            // --- MICROPHONE BUTTON (Custom Image Style) ---
                             Image(
                                 painter = painterResource(
-                                    id = if (isplayingquestion.value) R.drawable.pause else R.drawable.play
+                                    id = if (isRecording) R.drawable.pause else R.drawable.play
                                 ),
-                                contentDescription = "",
+                                contentDescription = "microphone",
                                 contentScale = ContentScale.Inside,
                                 modifier = Modifier
                                     .size(45.dp)
                                     .background(color = Color(0xF527B51A), shape = RoundedCornerShape(50))
                                     .clickable {
-                                        isplayingquestion.value = !isplayingquestion.value
+                                        if (!isRecording) {
+                                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                        } else {
+                                            recordedFile = audioRecorder.stopRecording()
+                                            isRecording = false
+                                        }
                                     }
                                     .padding(8.dp),
                                 colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color.White)
-
                             )
                         }
+
+
                         FlowRow(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
                             verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Top),
-                            maxItemsInEachRow = 4 // Optional: limit boxes per row
+                            maxItemsInEachRow = 4
                         ) {
                             lettersOnlyQuestion.forEachIndexed { index, char ->
                                 key("${currentindexquestion.value}_$index") {
@@ -325,7 +446,6 @@ fun Question19(onNextScreen: () -> Unit) {
                                 }
                             }
                         }
-
 
                         Box(
                             Modifier
@@ -349,12 +469,32 @@ fun Question19(onNextScreen: () -> Unit) {
                                                 stream.toByteArray()
                                             }
 
+                                            // 1. Send Handwriting Prediction
                                             sendSentenceToFlaskQ19(
                                                 currentUser.uid,
                                                 currentQuestionSentenceString,
                                                 imageList
-                                            ) { result ->
-                                                Log.d("FlaskAPI", "Result: $result")
+                                            ) { hResult ->
+                                                Log.d("FlaskAPI", "Handwriting Result: $hResult")
+                                            }
+
+                                            // 2. Send Audio Transcription independently
+                                            recordedFile?.let { audio ->
+                                                uploadAudioForTranscription(
+                                                    audio,
+                                                    NetworkConfig.SERVER_IP,
+                                                    currentQuestionSentenceString,
+                                                    currentUser.uid
+                                                ) { aResult ->
+                                                    Log.d("FlaskAPI", "Audio Result: $aResult")
+                                                    isLoading = false
+                                                    if (currentindexquestion.value < questionsentences.lastIndex) {
+                                                        currentindexquestion.value++
+                                                    } else {
+                                                        onNextScreen()
+                                                    }
+                                                }
+                                            } ?: run {
                                                 isLoading = false
                                                 if (currentindexquestion.value < questionsentences.lastIndex) {
                                                     currentindexquestion.value++
@@ -366,8 +506,6 @@ fun Question19(onNextScreen: () -> Unit) {
                                     }
                                 },
                             contentAlignment = Alignment.Center
-
-
                         )
                         {
                             Text(
@@ -377,84 +515,60 @@ fun Question19(onNextScreen: () -> Unit) {
                                     fontFamily = FontFamily(Font(R.font.windsol)),
                                     fontWeight = FontWeight(400),
                                     color = Color(0xFFFFFFFF),
-
-                                    ),
-
-
                                 )
+                            )
                         }
                     }
                 }
             }
+        }
 
-        } //Ending Original Screen
-
-        //Character reading question
+        // --- OVERLAY ---
         if (overlay_boolean.value) {
-
             Box(
                 modifier = Modifier
-                    .offset(x = 0.dp, y = 0.dp)
-                    .width(430.dp)
-                    .height(932.dp)
-                    .background(color = Color(0x4FFFFFFF))
                     .fillMaxSize()
-
+                    .background(color = Color(0x4FFFFFFF))
             ) {
-                //Speech Bubble Location
-
                 Box(
+                    contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(color = Color(0x4FFFFFFF))
-
+                        .align(Alignment.CenterEnd)
+                        .offset(y = -120.dp)
                 ) {
-                    // --- SPEECH BUBBLE (Center Right) ---
-
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .offset(y = -120.dp)
-                    ) {
-                        Image(
-                            painter = painterResource(R.drawable.speech_bubble),
-                            contentDescription = "",
+                    Image(
+                        painter = painterResource(R.drawable.speech_bubble),
+                        contentDescription = "",
+                    )
+                    Text(
+                        text = "Read and write the sentence \n shown below",
+                        style = TextStyle(
+                            fontSize = 25.sp,
+                            fontFamily = FontFamily(Font(R.font.windsol)),
+                            fontWeight = FontWeight(400),
+                            color = Color(0xFF27B51A),
+                            textAlign = TextAlign.Center,
                         )
-                        Text(
-                            text = "Read and write the sentence \n shown below",
-                            style = TextStyle(
-                                fontSize = 25.sp,
-                                fontFamily = FontFamily(Font(R.font.windsol)),
-                                fontWeight = FontWeight(400),
-                                color = Color(0xFF27B51A),
-                                textAlign = TextAlign.Center,
-                            )
-                        )
-                    }
-                    // --- DORAEMON (Bottom Left) ---
-
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(R.drawable.doraemon2)
-                            .build(),
-                        imageLoader = imageLoader,
-                        contentDescription = "Doraemon GIF",
-                        contentScale = ContentScale.FillBounds,
-                        modifier = Modifier
-                            .width(327.dp)
-                            .height(327.dp)
-                            .offset(y = -120.dp)
-                            .align(Alignment.BottomStart)
                     )
                 }
 
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(R.drawable.doraemon2)
+                        .build(),
+                    imageLoader = imageLoader,
+                    contentDescription = "Doraemon GIF",
+                    contentScale = ContentScale.FillBounds,
+                    modifier = Modifier
+                        .width(327.dp)
+                        .height(327.dp)
+                        .offset(y = -120.dp)
+                        .align(Alignment.BottomStart)
+                )
             }
         }
-
     }
 }
-
 
 @Composable
 fun DrawingBoxquestion19(
@@ -463,21 +577,19 @@ fun DrawingBoxquestion19(
 ) {
     val paths = remember { mutableStateListOf<Path>() }
     var currentPath by remember { mutableStateOf<Path?>(null) }
-
     val boxSizeDp = 64.dp
+
     Column(
         modifier = modifier
             .width(boxSizeDp)
             .wrapContentHeight()
             .border(width = 2.dp, color = Color.Gray, shape = RoundedCornerShape(8.dp)),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+        verticalArrangement = Arrangement.Center
     ) {
-
-
         Box(
             modifier = Modifier
-                .size(boxSizeDp) // Use the variable
+                .size(boxSizeDp)
                 .background(color = Color.White)
                 .clipToBounds()
                 .pointerInput(Unit) {
@@ -498,14 +610,11 @@ fun DrawingBoxquestion19(
                                 onPathsChanged(paths.toList())
                             }
                             currentPath = null
-                        },
-                        onDragCancel = {
                         }
                     )
                 }
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-
                 paths.forEach { path ->
                     drawPath(path = path, color = Color.Black, style = Stroke(8f))
                 }

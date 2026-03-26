@@ -9,7 +9,7 @@ import androidx.navigation.compose.rememberNavController
 //import org.example.frontend.question2.Question2
 import org.example.frontend.LoginScreen.LoginScreen
 import org.example.frontend.SignUpScreen.SignUpScreen
-import org.example.frontend.HomeScreen.HomeScreen
+import org.example.frontend.homescreenpage.HomePage
 import org.example.frontend.Question1.Question1
 import org.example.frontend.Question2.Question2
 import org.example.frontend.Question3.Question3
@@ -36,6 +36,8 @@ import org.example.frontend.AssesmentTest.Level4.Question18 as Alvl4Q18
 import org.example.frontend.AssesmentTest.Level4.Question19 as Alvl4Q19
 import org.example.frontend.AssesmentTest.Level3.Question11 as Alvl3Q11
 import org.example.frontend.cartoonselection.CartoonSelectionScreen
+import org.example.frontend.progresstracking.ProgressTrackingScreen
+import org.example.frontend.progresstracking.CommonErrorTestListScreen
 @Composable
 fun AppNavGraph(startDestination: String = "LoginScreen") {
     val navController = rememberNavController()
@@ -45,7 +47,8 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
             // pass navigation callback or navController to screen
             LoginScreen(
                 navController = navController,onSignUpScreen = { navController.navigate("SignUpScreen") },
-                onassessmentScreen={navController.navigate("Alvl4Q17")}
+                onassessmentScreen={navController.navigate("Alvl1Q1")},
+                onhomescreen={navController.navigate("HomePage")}
                 )
 
 
@@ -56,8 +59,12 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
                 onNextScreen={navController.navigate("Question1")}
             )
         }
-        composable("HomeScreen") {
-            HomeScreen()
+        composable("HomePage"){
+            HomePage (
+                onNavigateToProgress = {
+                    navController.navigate("progress_tracking")
+                }
+            )
         }
         composable("Question1") {
             // pass navigation callback or navController to screen
@@ -113,10 +120,10 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
             Alvl2Q10(onNextScreen = { navController.navigate("Alvl3Q11")})
         }
         composable("Alvl3Q11") {
-            Alvl3Q11(onNextScreen = { navController.navigate("Alvl3Q13")})
+            Alvl3Q11(onNextScreen = { navController.navigate("Alvl3Q12")})
         }
         composable("Alvl3Q12") {
-            Alvl3Q12()
+            Alvl3Q12(onNextScreen = { navController.navigate("Alvl3Q13")})
         }
         composable("Alvl3Q13") {
             Alvl3Q13(onNextScreen = { navController.navigate("Alvl3Q14")})
@@ -125,10 +132,10 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
             Alvl3Q14(onNextScreen = { navController.navigate("Alvl3Q15")})
         }
         composable("Alvl3Q15") {
-            Alvl3Q15()
+            Alvl3Q15(onNextScreen = { navController.navigate("Alvl4Q16")})
         }
         composable("Alvl4Q16") {
-            Alvl4Q16()
+            Alvl4Q16(onNextScreen = { navController.navigate("Alvl4Q17")})
         }
         composable("Alvl4Q17") {
             Alvl4Q17(onNextScreen = { navController.navigate("Alvl4Q18")})
@@ -141,7 +148,32 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
         }
 
         composable("CartoonSelectionScreen") {
-            CartoonSelectionScreen(onNextScreen = { navController.navigate("HomeScreen") })
+            CartoonSelectionScreen(onNextScreen = { navController.navigate("HomePage") })
+        }
+        composable("progress_tracking") {
+            ProgressTrackingScreen(
+                onHomeClick = {
+                    navController.navigate("HomePage") {
+                        popUpTo("HomePage") { inclusive = true }
+                    }
+                },
+                onNavigateToErrorList = {
+                    navController.navigate("error_list") // Route to the new screen
+                }
+            )
+        }
+
+        composable("error_list") {
+            val currentUserId = "eM15gnJeUWenLsJCBDxAMTeNWqg1"
+
+            CommonErrorTestListScreen(
+                userId = currentUserId, // Pass the required userId here
+                onHomeClick = {
+                    navController.navigate("HomePage") {
+                        popUpTo("HomePage") { inclusive = true }
+                    }
+                }
+            )
         }
 
     }

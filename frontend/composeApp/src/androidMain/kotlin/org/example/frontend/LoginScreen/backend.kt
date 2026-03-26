@@ -5,17 +5,37 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.firestore.FirebaseFirestore
 
 
 class LoginViewModel : ViewModel() {
-    fun login(email: String, password: String,onSuccess: () -> Unit) {
+    private val auth = FirebaseAuth.getInstance()
+    private val db = FirebaseFirestore.getInstance()
+    fun login(email: String, password: String,onSuccess: (Boolean) -> Unit) {
         FirebaseAuth.getInstance()
             .signInWithEmailAndPassword(email, password)
             .addOnCompleteListener {task ->
                 if (task.isSuccessful) {
-                    onSuccess()
+                    val userId = auth.currentUser?.uid
+                    if (userId != null) {
+                        checkAssessmentStatus(userId, onSuccess)
+                    }
                 }
 
+            }
+    }
+    private fun checkAssessmentStatus(userId: String, onResult: (Boolean) -> Unit) {
+        db.collection("users").document(userId).get()
+            .addOnSuccessListener { document ->
+                if (document != null && document.exists()) {
+                    val isComplete = document.getBoolean("hasCompletedAssessment") ?: false
+                    onResult(isComplete)
+                } else {
+                    onResult(false) // Default to false if no record found
+                }
+            }
+            .addOnFailureListener {
+                onResult(false)
             }
     }
     fun Passwordreset(ForgotEmail: String,onSuccess: () -> Unit){
@@ -27,7 +47,7 @@ class LoginViewModel : ViewModel() {
                 }
             }
     }
-    fun signInWithGoogle(idToken: String, onSuccess: () -> Unit, onError: (Exception) -> Unit) {
+    fun signInWithGoogle(idToken: String, onSuccess: (Boolean) -> Unit, onError: (Exception) -> Unit) {
         val auth: FirebaseAuth = FirebaseAuth.getInstance()
         val credential = GoogleAuthProvider.getCredential(idToken, null)
         auth.signInWithCredential(credential)
@@ -43,7 +63,8 @@ class LoginViewModel : ViewModel() {
                             }
                         auth.signOut()
                     } else {
-                        onSuccess()
+                        val userId = auth.currentUser?.uid
+                        if (userId != null) checkAssessmentStatus(userId, onSuccess)
                     }
                 } else {
                     onError(task.exception ?: Exception("Unknown error"))

@@ -41,7 +41,7 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 @Composable
-fun LoginScreen(onSignUpScreen: () -> Unit,navController: NavHostController,onassessmentScreen:()->Unit,
+fun LoginScreen(onSignUpScreen: () -> Unit,onhomescreen:()->Unit,navController: NavHostController,onassessmentScreen:()->Unit,
                 viewModel: LoginViewModel=androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     fun navigatetosignup()
@@ -50,10 +50,18 @@ fun LoginScreen(onSignUpScreen: () -> Unit,navController: NavHostController,onas
     }
 
     val scope = rememberCoroutineScope()
-    fun OnNextScreen() {
+    fun handleNavigation(isAssessmentComplete: Boolean) {
         scope.launch {
-            delay(2000L)
-            onassessmentScreen()
+            delay(2000L) // Optional delay for smooth transition
+            if (isAssessmentComplete) {
+                // Navigate to Home Screen
+                navController.navigate("HomePage") {
+                    popUpTo("login_screen") { inclusive = true }
+                }
+            } else {
+                // Navigate to Assessment Screen
+                onassessmentScreen()
+            }
         }
     }
     var email by remember { mutableStateOf("") }
@@ -92,9 +100,9 @@ fun LoginScreen(onSignUpScreen: () -> Unit,navController: NavHostController,onas
 
                     viewModel.signInWithGoogle(
                         idToken = googleIdToken,
-                        onSuccess = {
+                        onSuccess = {isComplete ->
                             Log.d("LoginScreen", "Google Login Success")
-                            OnNextScreen()
+                            handleNavigation(isComplete)
                         },
                         onError = { e ->
                             Log.e("LoginScreen", "Google Login Error: ${e.message}")
@@ -378,7 +386,8 @@ fun LoginScreen(onSignUpScreen: () -> Unit,navController: NavHostController,onas
 
                     {
                         viewModel.login(email,password, onSuccess = {
-                            OnNextScreen()
+                                isComplete ->
+                            handleNavigation(isComplete)
                         })
 
                     }

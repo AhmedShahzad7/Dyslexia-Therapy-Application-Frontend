@@ -69,7 +69,7 @@ data class CardItem(
 )
 
 @Composable
-fun Question12() {
+fun Question12(onNextScreen:()->Unit) {
     val ip = NetworkConfig.SERVER_IP
     val context = LocalContext.current
     val overlay_boolean = remember { mutableStateOf(false) }
@@ -240,7 +240,8 @@ fun Question12() {
                             onDismiss = {
                                 if (isTopCard) {
                                     cards.remove(card)
-                                    // if (cards.isEmpty()) onNextPage()
+                                     if (cards.isEmpty()){
+                                         onNextScreen() }
                                 }
                             },
                             autoDismiss = isTopCard && autoDismissTop,

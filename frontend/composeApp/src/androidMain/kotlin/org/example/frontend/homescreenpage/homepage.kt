@@ -37,7 +37,7 @@ private val JumpYellow = Color(0xFFFFE100)
 private val DarkBlueBorder = Color(0xFF000278)
 
 @Composable
-fun HomePage() {
+fun HomePage(onNavigateToProgress: () -> Unit) {
     MaterialTheme {
         Box(
             modifier = Modifier.fillMaxSize()
@@ -150,7 +150,7 @@ fun HomePage() {
                         .clickable(
                             interactionSource = interactionSourceProgress, // 4. Pass Source here
                             indication = null
-                        ) { println("Opening Progress Tracking...") }
+                        ) { onNavigateToProgress() }
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.frame32),

@@ -42,6 +42,7 @@ import android.widget.Toast
 import okhttp3.*
 import java.io.IOException
 import com.google.firebase.auth.FirebaseAuth
+import org.example.frontend.NetworkConfig
 import java.util.concurrent.TimeUnit
 
 // Define Colors
@@ -72,7 +73,11 @@ fun CartoonSelectionScreen(onNextScreen: () -> Unit) {
     var isSelectionLocked by remember { mutableStateOf(false) }
 
     // --- NETWORK CONFIG ---
-    val ip_address = "http://192.168.1.9:5000" // Emulator IP (Change to your PC IP for real device)
+    val ip_address = if (NetworkConfig.SERVER_IP.startsWith("http")) {
+        NetworkConfig.SERVER_IP
+    } else {
+        "http://${NetworkConfig.SERVER_IP}"
+    }
 
     fun sendToFlask(cartoonName: String) {
         val currentUser = FirebaseAuth.getInstance().currentUser

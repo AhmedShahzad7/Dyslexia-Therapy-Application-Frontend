@@ -185,7 +185,7 @@ fun sendBatchImagesToFlask(
 
 
 @Composable
-fun Question15(){
+fun Question15(onNextScreen:()->Unit){
 
     val context = LocalContext.current
     val overlay_boolean= remember { mutableStateOf(false) }
@@ -374,7 +374,7 @@ fun Question15(){
 
                                     cards.remove(card)
                                     if (cards.isEmpty()) {
-                                        // onNextPage()
+                                        onNextScreen()
                                     }
                                 }
                             },
