@@ -57,7 +57,7 @@ fun CommonErrorTestListScreen(onHomeClick: () -> Unit, userId: String) {
             println("Network Error: ${e.message}")
             Toast.makeText(
                 context,
-                "Server Unreachable! Check IP: 10.109.22.5",
+               e.message,
                 Toast.LENGTH_LONG
             ).show()
         } finally {

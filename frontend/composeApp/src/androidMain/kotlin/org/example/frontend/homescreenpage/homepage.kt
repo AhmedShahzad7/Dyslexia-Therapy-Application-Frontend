@@ -27,7 +27,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.example.frontend.NetworkConfig
 import org.example.frontend.R
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import com.google.firebase.auth.FirebaseAuth
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import org.json.JSONObject
+import java.io.IOException
+
+
+
 
 // --- Colors ---
 private val NavBlue = Color(0xDE000278)
@@ -38,6 +53,73 @@ private val DarkBlueBorder = Color(0xFF000278)
 
 @Composable
 fun HomePage(onNavigateToProgress: () -> Unit) {
+    val ip= NetworkConfig.SERVER_IP
+    var showScoreDialog by remember { mutableStateOf(false) }
+    var userScores by remember { mutableStateOf<List<LevelScore>>(emptyList()) }
+
+    fun fetchScoresFromFlask(userid: String, onResult: (List<LevelScore>) -> Unit) {
+        val client = OkHttpClient()
+
+        val request = Request.Builder()
+            .url("http://$ip/api/scores/$userid")
+            .get()
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("FlaskAPI", "Error fetching scores! ${e.message}", e)
+                Handler(Looper.getMainLooper()).post {
+                    onResult(emptyList()) // Return an empty list on failure
+                }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                val result = response.body?.string()
+                Log.d("FlaskAPI", "Scores Response: $result")
+                val parsedScores = mutableListOf<LevelScore>()
+
+                if (response.isSuccessful && result != null) {
+                    try {
+                        //  Parse the JSON response: {"status": "success", "data": [...]}
+                        val jsonObject = JSONObject(result)
+                        val status = jsonObject.optString("status")
+
+                        if (status == "success") {
+                            val dataArray = jsonObject.getJSONArray("data")
+
+                            // Loop through the array and convert to LevelScore objects
+                            for (i in 0 until dataArray.length()) {
+                                val item = dataArray.getJSONObject(i)
+                                val level = item.getString("level")
+                                val score = item.getString("score")
+                                parsedScores.add(LevelScore(level, score))
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("FlaskAPI", "JSON Parsing error: ${e.message}")
+                    }
+                } else {
+                    Log.e("FlaskAPI", "Server error or empty response: ${response.code}")
+                }
+
+                //Return the parsed list on the Main Thread so Compose can use it
+                Handler(Looper.getMainLooper()).post {
+                    onResult(parsedScores)
+                }
+            }
+        })
+    }
+    LaunchedEffect(Unit) {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser != null) {
+            val userId = currentUser.uid
+            fetchScoresFromFlask(userId) { fetchedList ->
+
+                userScores = fetchedList
+                showScoreDialog = true
+            }
+
+        }
+    }
     MaterialTheme {
         Box(
             modifier = Modifier.fillMaxSize()
@@ -283,6 +365,14 @@ fun HomePage(onNavigateToProgress: () -> Unit) {
                     }
                 }
             }
+            //Show the Popup
+            if (showScoreDialog) {
+                ScorePopup(
+                    scores = userScores,
+                    onDismiss = { showScoreDialog = false }
+                )
+            }
         }
+
     }
 }

@@ -124,7 +124,7 @@ fun uploadAudioForTranscription(
         val baseUrl = if (serverIp.startsWith("http")) serverIp else "http://$serverIp"
 
         val request = Request.Builder()
-            .url("$baseUrl/transcribe_and_score")
+            .url("$baseUrl/transcribe_and_score1")
             .post(requestBody)
             .build()
 

@@ -38,6 +38,48 @@ import org.example.frontend.AssesmentTest.Level3.Question11 as Alvl3Q11
 import org.example.frontend.cartoonselection.CartoonSelectionScreen
 import org.example.frontend.progresstracking.ProgressTrackingScreen
 import org.example.frontend.progresstracking.CommonErrorTestListScreen
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import org.example.frontend.NetworkConfig
+import org.example.frontend.R
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import com.google.firebase.auth.FirebaseAuth
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import org.json.JSONObject
+import java.io.IOException
+
+
 @Composable
 fun AppNavGraph(startDestination: String = "LoginScreen") {
     val navController = rememberNavController()
@@ -164,16 +206,20 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
         }
 
         composable("error_list") {
-            val currentUserId = "eM15gnJeUWenLsJCBDxAMTeNWqg1"
-
-            CommonErrorTestListScreen(
-                userId = currentUserId, // Pass the required userId here
-                onHomeClick = {
-                    navController.navigate("HomePage") {
-                        popUpTo("HomePage") { inclusive = true }
+            val currentUser = FirebaseAuth.getInstance().currentUser
+            if (currentUser != null) {
+                val userId = currentUser.uid
+                CommonErrorTestListScreen(
+                    userId = userId,
+                    onHomeClick = {
+                        navController.navigate("HomePage") {
+                            popUpTo("HomePage") { inclusive = true }
+                        }
                     }
-                }
-            )
+                )
+            }
+
+
         }
 
     }
