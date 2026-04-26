@@ -14,7 +14,7 @@ import org.example.frontend.Question1.Question1
 import org.example.frontend.Question2.Question2
 import org.example.frontend.Question3.Question3
 import org.example.frontend.Question4.Question4
-
+import org.example.frontend.Levelselection.Levelselection
 import org.example.frontend.AssesmentTest.Level1.Question1 as Alvl1Q1
 import org.example.frontend.AssesmentTest.Level1.Question2 as Alvl1Q2
 import org.example.frontend.AssesmentTest.Level1.Question3 as Alvl1Q3
@@ -105,7 +105,20 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
             HomePage (
                 onNavigateToProgress = {
                     navController.navigate("progress_tracking")
+                },
+                onNavigateToLevels = {
+                    navController.navigate("Levelselection")
                 }
+            )
+        }
+        composable("Levelselection") {
+
+            Levelselection(
+                onNavigateHome={
+                    navController.navigate("HomePage")
+
+                }
+
             )
         }
         composable("Question1") {

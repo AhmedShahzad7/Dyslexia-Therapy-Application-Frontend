@@ -2,5 +2,5 @@ package org.example.frontend
 
 object NetworkConfig {
     // Change this ONE line, and it updates everywhere
-    const val SERVER_IP = "127.0.0.1:5001"
+    const val SERVER_IP = "192.168.1.7:5001"
 }

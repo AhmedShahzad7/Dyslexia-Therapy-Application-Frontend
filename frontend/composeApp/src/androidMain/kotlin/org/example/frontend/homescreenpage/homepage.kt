@@ -52,7 +52,9 @@ private val JumpYellow = Color(0xFFFFE100)
 private val DarkBlueBorder = Color(0xFF000278)
 
 @Composable
-fun HomePage(onNavigateToProgress: () -> Unit) {
+fun HomePage(onNavigateToProgress: () -> Unit,
+             onNavigateToLevels: () -> Unit
+             ) {
     val ip= NetworkConfig.SERVER_IP
     var showScoreDialog by remember { mutableStateOf(false) }
     var userScores by remember { mutableStateOf<List<LevelScore>>(emptyList()) }
@@ -294,7 +296,7 @@ fun HomePage(onNavigateToProgress: () -> Unit) {
                         .clickable(
                             interactionSource = interactionSourceLevels, // 4. Pass Source here
                             indication = null
-                        ) { println("Opening Levels...") }
+                        ) { onNavigateToLevels() }
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.frame31),
@@ -332,6 +334,7 @@ fun HomePage(onNavigateToProgress: () -> Unit) {
                         shape = RoundedCornerShape(topStart = 25.dp, topEnd = 25.dp)
                     )
                     .padding(10.dp)
+
             ) {
                 Row(
                     modifier = Modifier.fillMaxSize(),
