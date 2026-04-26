@@ -335,10 +335,9 @@ fun Question12(onNextScreen:()->Unit) {
                                                             )
 
                                                             // Check if the result JSON contains "is_correct": true
-                                                            if (transcriptionText.contains("\"is_correct\": true")) {
-                                                                autoDismissTop =
-                                                                    true // Swipe the card away automatically!
-                                                            }
+
+                                                                autoDismissTop = true // Swipe the card away automatically!
+
                                                         }
                                                     }
                                                 }
