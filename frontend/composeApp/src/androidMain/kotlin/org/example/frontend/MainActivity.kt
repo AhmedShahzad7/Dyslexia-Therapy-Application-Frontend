@@ -11,6 +11,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         FirebaseApp.initializeApp(this)
+        // ---> LOAD YOUR SAVED IP HERE <---
+        NetworkConfig.loadIp(this)
         setContent {
             App()
         }

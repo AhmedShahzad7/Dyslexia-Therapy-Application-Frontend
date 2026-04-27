@@ -48,6 +48,9 @@ fun LoginScreen(onSignUpScreen: () -> Unit,onhomescreen:()->Unit,navController: 
     {
         onSignUpScreen()
     }
+    LaunchedEffect(Unit) {
+        navController.navigate("DebugMenu")
+    }
 
     val scope = rememberCoroutineScope()
     fun handleNavigation(isAssessmentComplete: Boolean) {

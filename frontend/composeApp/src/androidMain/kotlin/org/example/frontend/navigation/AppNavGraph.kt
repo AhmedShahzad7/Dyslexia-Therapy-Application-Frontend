@@ -10,6 +10,8 @@ import androidx.navigation.compose.rememberNavController
 import org.example.frontend.LoginScreen.LoginScreen
 import org.example.frontend.SignUpScreen.SignUpScreen
 import org.example.frontend.homescreenpage.HomePage
+import androidx.navigation.compose.dialog
+import org.example.frontend.debugmenu.DebugMenu
 import org.example.frontend.Question1.Question1
 import org.example.frontend.Question2.Question2
 import org.example.frontend.Question3.Question3
@@ -94,6 +96,12 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
                 )
 
 
+        }
+
+        dialog("DebugMenu") {
+            DebugMenu(
+                onDismiss = { navController.popBackStack() } // Closes the popup
+            )
         }
         composable("SignUpScreen") {
             SignUpScreen(
