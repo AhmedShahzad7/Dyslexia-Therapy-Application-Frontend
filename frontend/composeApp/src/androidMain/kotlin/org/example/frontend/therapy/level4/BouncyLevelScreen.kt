@@ -1,4 +1,4 @@
-package org.example.frontend.therapy.level1
+package org.example.frontend.therapy.level4
 
 import android.graphics.Color.parseColor
 import android.net.Uri
@@ -33,7 +33,7 @@ val BabyGemoyFont = FontFamily(Font(R.font.baby_gemoy))
 @OptIn(UnstableApi::class)
 @Composable
 fun BouncyLevelScreen(
-    viewModel: TherapyViewModel,
+    viewModel: TherapyViewModel4,
     onIntroFinished: () -> Unit // Call this to navigate to Question 1
 ) {
     val context = LocalContext.current
@@ -65,7 +65,7 @@ fun BouncyLevelScreen(
     // Initialize ExoPlayer
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
-            val videoUri = Uri.parse("android.resource://${context.packageName}/${R.raw.level1_intro}")
+            val videoUri = Uri.parse("android.resource://${context.packageName}/${R.raw.level4_intro}")
             setMediaItem(MediaItem.fromUri(videoUri))
             repeatMode = Player.REPEAT_MODE_ONE
             volume = 0f
@@ -133,7 +133,7 @@ fun BouncyLevelScreen(
 
 @Composable
 fun BouncyTextOverlay() {
-    val textToAnimate = "Level 1"
+    val textToAnimate = "Level 4"
     val yOffsets = remember { textToAnimate.map { Animatable(-1000f) } }
 
     LaunchedEffect(Unit) {
@@ -161,8 +161,8 @@ fun BouncyTextOverlay() {
                 Text(
                     text = char.toString(),
                     fontFamily = BabyGemoyFont,
-                    fontSize = 80.sp,
-                    color = Color(parseColor("#FB0FFF")),
+                    fontSize = 64.sp,
+                    color = Color(parseColor("#F0A523")),
                     modifier = modifier
                 )
             }

@@ -40,9 +40,24 @@ import org.example.frontend.AssesmentTest.Level3.Question11 as Alvl3Q11
 import org.example.frontend.cartoonselection.CartoonSelectionScreen
 import org.example.frontend.progresstracking.ProgressTrackingScreen
 import org.example.frontend.progresstracking.CommonErrorTestListScreen
+//LEVEL 1
+import org.example.frontend.therapy.level1.BouncyLevelScreen
+import org.example.frontend.therapy.level1.TherapySessionRouter
+import org.example.frontend.therapy.level1.TherapyViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+
+
+//LEVEL 2
 import org.example.frontend.therapy.level1.BouncyLevelScreen as Level1introScreen
 import org.example.frontend.therapy.Level2.BouncyLevel2Screen as Level2introScreen
 import org.example.frontend.therapy.Level2.QuestionL2Therapy as Level2Therapy
+
+
+// LEVEL 4
+import org.example.frontend.therapy.level4.BouncyLevelScreen as BouncyLevelScreen4
+import org.example.frontend.therapy.level4.TherapySessionRouter4
+import org.example.frontend.therapy.level4.TherapyViewModel4
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -86,9 +101,10 @@ import java.io.IOException
 
 
 @Composable
-fun AppNavGraph(startDestination: String = "LoginScreen") {
+fun AppNavGraph(startDestination: String = "Level2introScreen") {
     val navController = rememberNavController()
-
+    val sharedTherapyViewModel: TherapyViewModel = viewModel()
+    val sharedTherapyViewModel4: TherapyViewModel4 = viewModel()
     NavHost(navController = navController, startDestination = startDestination) {
         composable("LoginScreen") {
             // pass navigation callback or navController to screen
@@ -100,9 +116,7 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
 
 
         }
-        composable("Level1introScreen") {
-            Level1introScreen()
-        }
+
         composable("Level2introScreen") {
             Level2introScreen(onNextScreen = { navController.navigate("Level2Therapy") })
         }
@@ -224,6 +238,48 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
         composable("Alvl4Q19") {
             Alvl4Q19(onNextScreen = { navController.navigate("CartoonSelectionScreen")})
         }
+
+
+        //LEVELS
+        //LEVEL 1
+        composable("BouncyLevelScreen") {
+            BouncyLevelScreen(
+                viewModel = sharedTherapyViewModel,
+                onIntroFinished = { navController.navigate("TherapySessionRouter") }
+            )
+        }
+        composable("TherapySessionRouter") {
+            TherapySessionRouter(
+                viewModel = sharedTherapyViewModel,
+                // Triggers when getQuestionForIndex(currentIndex) returns null (all items mastered or completed)
+                onSessionComplete = {
+                    navController.navigate("HomePage") {
+                        // Optional safety: pop the stack so pressing back doesn't reopen the session loop
+                        popUpTo("HomePage") { inclusive = true }
+                    }
+                }
+            )
+        }
+        //LEVEL 4
+        composable("BouncyLevelScreen4") {
+            BouncyLevelScreen4(
+                viewModel = sharedTherapyViewModel4,
+                onIntroFinished = { navController.navigate("TherapySessionRouter4") }
+            )
+        }
+        composable("TherapySessionRouter4") {
+            TherapySessionRouter4(
+                viewModel = sharedTherapyViewModel4,
+                onSessionComplete = {
+                    navController.navigate("HomePage") {
+                        popUpTo("HomePage") { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        //////////////////////////////////////////////////
+
 
         composable("CartoonSelectionScreen") {
             CartoonSelectionScreen(onNextScreen = { navController.navigate("HomePage") })
