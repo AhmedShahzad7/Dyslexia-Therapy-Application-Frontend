@@ -5,6 +5,7 @@ import android.content.pm.ActivityInfo
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -43,27 +44,28 @@ val babyGemoyFontFamily = FontFamily(
     Font(R.font.baby_gemoy, FontWeight.Normal)
 )
 
-// Data class updated with colors and label positioning
+// Added 'levelNumber' (1-4) and 'isQuiz' flag to easily route clicks
 data class PlanetData(
     val imageRes: Int,
     val label: String,
     val boxColor: Color,
     val textColor: Color,
     val isLabelAbove: Boolean,
-    val isLocked: Boolean = true
+    val isLocked: Boolean = true,
+    val levelNumber: Int = 0,
+    val isQuiz: Boolean = false
 )
 
 @Composable
 fun Levelselection(
-
-    onNavigateHome:() ->Unit,
-    onLevel2Therapy: () -> Unit
+    onNavigateHome: () -> Unit,
+    onNavigateToLevel: (Int) -> Unit // Unified routing callback
 ) {
+    val context = LocalContext.current
     // State to track how many planets are unlocked (Index 0 is Level 1)
     var maxUnlockedIndex by remember { mutableIntStateOf(0) }
 
     // Force Landscape Orientation
-    val context = LocalContext.current
     DisposableEffect(Unit) {
         val activity = context as? Activity
         val originalOrientation = activity?.requestedOrientation
@@ -104,31 +106,26 @@ fun Levelselection(
                                 val level2Empty = jsonObject.optBoolean("Level2_Empty", false)
                                 val scores = mutableMapOf<String, Int>()
 
-                                // Parse the "X/Y" score strings
                                 for (i in 0 until dataArray.length()) {
                                     val item = dataArray.getJSONObject(i)
                                     val level = item.getString("level")
                                     val scoreStr = item.getString("score")
 
-                                    // Extract the correct answers (the number before the '/')
                                     val correct = scoreStr.split("/")[0].toIntOrNull() ?: 0
                                     scores[level] = correct
                                 }
 
-                                // Calculate max unlocked index based on passing score of 3
-                                var newMaxIndex = 0 // Default: Level 1 is always unlocked
+                                // Score calculation logic remains intact
+                                var newMaxIndex = 0
                                 if ((scores["Level_1"] ?: 0) >= 3) {
                                     newMaxIndex = 2 // Unlocks Quiz 1 & Level 2
-                                    // Only check Level 2 if they successfully passed Level 1
                                     if ((scores["Level_2"] ?: 0) >= 3 || level2Empty) {
                                         newMaxIndex = 4 // Unlocks Quiz 2 & Level 3
-                                        // Only check Level 3 if they successfully passed Level 2
                                         if ((scores["Level_3"] ?: 0) >= 3) {
                                             newMaxIndex = 6 // Unlocks Quiz 3 & Level 4
                                         }
                                     }
                                 }
-                                // Update state on main thread
                                 Handler(Looper.getMainLooper()).post {
                                     maxUnlockedIndex = newMaxIndex
                                 }
@@ -142,22 +139,21 @@ fun Levelselection(
         }
     }
 
-    // Generate the 7 planets based on dynamic lock states
+    // Configured with target levels and quiz markers
     val planets = listOf(
-        PlanetData(R.drawable.p1, "LEVEL 1", Color(0xFF00006B), Color(0xFF27B51A), isLabelAbove = false, isLocked = maxUnlockedIndex < 0), // Index 0
-        PlanetData(R.drawable.p2, "QUIZ 1", Color(0xFF27B51A), Color(0xFFEB4335), isLabelAbove = true,  isLocked = maxUnlockedIndex < 1), // Index 1
-        PlanetData(R.drawable.p3, "LEVEL 2", Color(0xFFF8335D), Color(0xFF27B51A), isLabelAbove = false, isLocked = maxUnlockedIndex < 2), // Index 2
-        PlanetData(R.drawable.p4, "QUIZ 2", Color(0xFFFBBC05), Color(0xFF4285F4), isLabelAbove = true,  isLocked = maxUnlockedIndex < 3), // Index 3
-        PlanetData(R.drawable.p5, "LEVEL 3", Color(0xFF8A38F5), Color(0xFFFFE100), isLabelAbove = true,  isLocked = maxUnlockedIndex < 4), // Index 4
-        PlanetData(R.drawable.p6, "QUIZ 3", Color(0xFF4285F4), Color(0xFF000278), isLabelAbove = true,  isLocked = maxUnlockedIndex < 5), // Index 5
-        PlanetData(R.drawable.p7, "LEVEL 4", Color(0xFF27B51A), Color(0xFF1517B2), isLabelAbove = false, isLocked = maxUnlockedIndex < 6)  // Index 6
+        PlanetData(R.drawable.p1, "LEVEL 1", Color(0xFF00006B), Color(0xFF27B51A), isLabelAbove = false, isLocked = maxUnlockedIndex < 0, levelNumber = 1),
+        PlanetData(R.drawable.p2, "QUIZ 1", Color(0xFF27B51A), Color(0xFFEB4335), isLabelAbove = true,  isLocked = maxUnlockedIndex < 1, isQuiz = true),
+        PlanetData(R.drawable.p3, "LEVEL 2", Color(0xFFF8335D), Color(0xFF27B51A), isLabelAbove = false, isLocked = maxUnlockedIndex < 2, levelNumber = 2),
+        PlanetData(R.drawable.p4, "QUIZ 2", Color(0xFFFBBC05), Color(0xFF4285F4), isLabelAbove = true,  isLocked = maxUnlockedIndex < 3, isQuiz = true),
+        PlanetData(R.drawable.p5, "LEVEL 3", Color(0xFF8A38F5), Color(0xFFFFE100), isLabelAbove = true,  isLocked = maxUnlockedIndex < 4, levelNumber = 3),
+        PlanetData(R.drawable.p6, "QUIZ 3", Color(0xFF4285F4), Color(0xFF000278), isLabelAbove = true,  isLocked = maxUnlockedIndex < 5, isQuiz = true),
+        PlanetData(R.drawable.p7, "LEVEL 4", Color(0xFF27B51A), Color(0xFF1517B2), isLabelAbove = false, isLocked = maxUnlockedIndex < 6, levelNumber = 4)
     )
 
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        // Map Background
         Image(
             painter = painterResource(id = R.drawable.level_world),
             contentDescription = "Background",
@@ -165,7 +161,6 @@ fun Levelselection(
             modifier = Modifier.fillMaxSize()
         )
 
-        // Zigzag Scrollable Row
         LazyRow(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 64.dp),
@@ -176,12 +171,21 @@ fun Levelselection(
                 val isHigh = index % 2 != 0
                 PlanetNode(
                     planet = planet,
-                    modifier = Modifier.offset(y = if (isHigh) (-60).dp else 60.dp)
+                    modifier = Modifier.offset(y = if (isHigh) (-60).dp else 60.dp),
+                    onClick = {
+                        if (planet.isLocked) {
+                            Toast.makeText(context, "Complete previous levels to unlock!", Toast.LENGTH_SHORT).show()
+                        } else if (planet.isQuiz) {
+                            Toast.makeText(context, "Quiz is under development. Coming Soon!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            // Route directly to the respective level therapy folder
+                            onNavigateToLevel(planet.levelNumber)
+                        }
+                    }
                 )
             }
         }
 
-        // Exit Button floating at the Top Left
         Image(
             painter = painterResource(id = R.drawable.exit),
             contentDescription = "Exit Level Selection",
@@ -190,16 +194,13 @@ fun Levelselection(
                 .align(Alignment.TopStart)
                 .padding(24.dp)
                 .size(50.dp)
-                .clickable {
-                    onNavigateHome();
-
-                }
+                .clickable { onNavigateHome() }
         )
     }
 }
 
 @Composable
-fun PlanetNode(planet: PlanetData, modifier: Modifier = Modifier) {
+fun PlanetNode(planet: PlanetData, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
@@ -211,14 +212,14 @@ fun PlanetNode(planet: PlanetData, modifier: Modifier = Modifier) {
 
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(100.dp)
+            modifier = Modifier
+                .size(100.dp)
+                .clickable { onClick() } // Trigger click logic here
         ) {
-            // Check if planet is locked to apply dimming, else show normally
             Image(
                 painter = painterResource(id = planet.imageRes),
                 contentDescription = planet.label,
                 contentScale = ContentScale.Fit,
-                // Optional: Dim the planet itself slightly if locked
                 modifier = Modifier.fillMaxSize().let {
                     if (planet.isLocked) it.background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(100.dp)) else it
                 }

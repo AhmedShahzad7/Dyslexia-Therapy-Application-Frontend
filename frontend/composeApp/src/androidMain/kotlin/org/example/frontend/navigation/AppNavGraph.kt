@@ -52,6 +52,14 @@ import org.example.frontend.therapy.level1.BouncyLevelScreen as Level1introScree
 import org.example.frontend.therapy.Level2.BouncyLevel2Screen as Level2introScreen
 import org.example.frontend.therapy.Level2.QuestionL2Therapy as Level2Therapy
 
+//LEVEL 3
+import org.example.frontend.therapy.level3.BouncyLevel3Screen
+import org.example.frontend.therapy.level3.QuestionL11
+import org.example.frontend.therapy.level3.QuestionL12
+import org.example.frontend.therapy.level3.QuestionL13
+import org.example.frontend.therapy.level3.QuestionL14
+import org.example.frontend.therapy.level3.QuestionL15
+
 
 // LEVEL 4
 import org.example.frontend.therapy.level4.BouncyLevelScreen as BouncyLevelScreen4
@@ -91,6 +99,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.delay
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
@@ -101,7 +110,7 @@ import java.io.IOException
 
 
 @Composable
-fun AppNavGraph(startDestination: String = "Level2introScreen") {
+fun AppNavGraph(startDestination: String = "LoginScreen") {
     val navController = rememberNavController()
     val sharedTherapyViewModel: TherapyViewModel = viewModel()
     val sharedTherapyViewModel4: TherapyViewModel4 = viewModel()
@@ -117,12 +126,7 @@ fun AppNavGraph(startDestination: String = "Level2introScreen") {
 
         }
 
-        composable("Level2introScreen") {
-            Level2introScreen(onNextScreen = { navController.navigate("Level2Therapy") })
-        }
-        composable("Level2Therapy") {
-            Level2Therapy(onNextScreen = { navController.navigate("HomePage") })
-        }
+
         dialog("DebugMenu") {
             DebugMenu(
                 onDismiss = { navController.popBackStack() } // Closes the popup
@@ -147,16 +151,17 @@ fun AppNavGraph(startDestination: String = "Level2introScreen") {
         composable("Levelselection") {
 
             Levelselection(
-                onNavigateHome={
-                    navController.navigate("HomePage")
-
-                },
-                onLevel2Therapy={
-                    navController.navigate("Level2introScreen")
-
+                onNavigateHome = { navController.navigate("HomePage") },
+                onNavigateToLevel = { levelNum ->
+                    when (levelNum) {
+                        1 -> navController.navigate("BouncyLevelScreen")
+                        2 -> navController.navigate("Level2introScreen")
+                        3 -> navController.navigate("TherapyBouncyLevel3")
+                        4 -> navController.navigate("BouncyLevelScreen4")
+                    }
                 }
-
             )
+
         }
         composable("Question1") {
             // pass navigation callback or navController to screen
@@ -260,6 +265,55 @@ fun AppNavGraph(startDestination: String = "Level2introScreen") {
                 }
             )
         }
+        //Level 2
+
+        composable("Level2introScreen") {
+            Level2introScreen(onNextScreen = { navController.navigate("Level2Therapy") })
+        }
+        composable("Level2Therapy") {
+            Level2Therapy(onNextScreen = { navController.navigate("HomePage") })
+        }
+
+        //LEVEL 3
+        composable("TherapyBouncyLevel3") {
+            BouncyLevel3Screen()
+
+            // Auto-navigate to Question 11 after 4 seconds to let the bouncy animation finish
+            LaunchedEffect(Unit) {
+                delay(4000)
+                navController.navigate("QuestionL11") {
+                    // Removes the intro screen from backstack so they don't go back to it
+                    popUpTo("TherapyBouncyLevel3") { inclusive = true }
+                }
+            }
+        }
+
+        composable("QuestionL11") {
+            QuestionL11(onNextScreen = { navController.navigate("QuestionL12") })
+        }
+
+        composable("QuestionL12") {
+            QuestionL12(onNextScreen = { navController.navigate("QuestionL13") })
+        }
+
+        composable("QuestionL13") {
+            QuestionL13(onNextScreen = { navController.navigate("QuestionL14") })
+        }
+
+        composable("QuestionL14") {
+            QuestionL14(onNextScreen = { navController.navigate("QuestionL15") })
+        }
+
+        composable("QuestionL15") {
+            QuestionL15(onNextScreen = {
+                // Navigate back to HomePage or CartoonSelectionScreen when Therapy Level 3 is finished
+                navController.navigate("HomePage") {
+                    popUpTo("HomePage") { inclusive = true }
+                }
+            })
+        }
+
+
         //LEVEL 4
         composable("BouncyLevelScreen4") {
             BouncyLevelScreen4(
