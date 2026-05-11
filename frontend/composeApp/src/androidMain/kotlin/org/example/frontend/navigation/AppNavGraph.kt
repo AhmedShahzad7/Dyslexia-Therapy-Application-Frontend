@@ -40,6 +40,9 @@ import org.example.frontend.AssesmentTest.Level3.Question11 as Alvl3Q11
 import org.example.frontend.cartoonselection.CartoonSelectionScreen
 import org.example.frontend.progresstracking.ProgressTrackingScreen
 import org.example.frontend.progresstracking.CommonErrorTestListScreen
+import org.example.frontend.therapy.level1.BouncyLevelScreen as Level1introScreen
+import org.example.frontend.therapy.Level2.BouncyLevel2Screen as Level2introScreen
+import org.example.frontend.therapy.Level2.QuestionL2Therapy as Level2Therapy
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -92,12 +95,20 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
             LoginScreen(
                 navController = navController,onSignUpScreen = { navController.navigate("SignUpScreen") },
                 onassessmentScreen={navController.navigate("Alvl1Q1")},
-                onhomescreen={navController.navigate("HomePage")}
+                onhomescreen={navController.navigate("HomePage")} //HomePage
                 )
 
 
         }
-
+        composable("Level1introScreen") {
+            Level1introScreen()
+        }
+        composable("Level2introScreen") {
+            Level2introScreen(onNextScreen = { navController.navigate("Level2Therapy") })
+        }
+        composable("Level2Therapy") {
+            Level2Therapy(onNextScreen = { navController.navigate("HomePage") })
+        }
         dialog("DebugMenu") {
             DebugMenu(
                 onDismiss = { navController.popBackStack() } // Closes the popup
@@ -124,6 +135,10 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
             Levelselection(
                 onNavigateHome={
                     navController.navigate("HomePage")
+
+                },
+                onLevel2Therapy={
+                    navController.navigate("Level2introScreen")
 
                 }
 

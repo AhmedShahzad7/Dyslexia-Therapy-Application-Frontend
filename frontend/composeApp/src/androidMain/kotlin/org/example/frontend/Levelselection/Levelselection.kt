@@ -56,7 +56,8 @@ data class PlanetData(
 @Composable
 fun Levelselection(
 
-    onNavigateHome:() ->Unit
+    onNavigateHome:() ->Unit,
+    onLevel2Therapy: () -> Unit
 ) {
     // State to track how many planets are unlocked (Index 0 is Level 1)
     var maxUnlockedIndex by remember { mutableIntStateOf(0) }
@@ -100,6 +101,7 @@ fun Levelselection(
                             val jsonObject = JSONObject(result)
                             if (jsonObject.optString("status") == "success") {
                                 val dataArray = jsonObject.getJSONArray("data")
+                                val level2Empty = jsonObject.optBoolean("Level2_Empty", false)
                                 val scores = mutableMapOf<String, Int>()
 
                                 // Parse the "X/Y" score strings
@@ -118,7 +120,7 @@ fun Levelselection(
                                 if ((scores["Level_1"] ?: 0) >= 3) {
                                     newMaxIndex = 2 // Unlocks Quiz 1 & Level 2
                                     // Only check Level 2 if they successfully passed Level 1
-                                    if ((scores["Level_2"] ?: 0) >= 3) {
+                                    if ((scores["Level_2"] ?: 0) >= 3 || level2Empty) {
                                         newMaxIndex = 4 // Unlocks Quiz 2 & Level 3
                                         // Only check Level 3 if they successfully passed Level 2
                                         if ((scores["Level_3"] ?: 0) >= 3) {

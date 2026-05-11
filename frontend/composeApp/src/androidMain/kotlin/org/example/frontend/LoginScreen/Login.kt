@@ -58,7 +58,7 @@ fun LoginScreen(onSignUpScreen: () -> Unit,onhomescreen:()->Unit,navController: 
             delay(2000L) // Optional delay for smooth transition
             if (isAssessmentComplete) {
                 // Navigate to Home Screen
-                navController.navigate("HomePage") {
+                navController.navigate("HomePage") { //HomePage
                     popUpTo("login_screen") { inclusive = true }
                 }
             } else {
