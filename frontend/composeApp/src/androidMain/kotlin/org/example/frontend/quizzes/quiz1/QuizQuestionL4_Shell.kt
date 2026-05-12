@@ -1,12 +1,9 @@
-package org.example.frontend.therapy.level1
+package org.example.frontend.quizzes.quiz1
 
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.os.Build.VERSION.SDK_INT
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,7 +16,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -40,32 +36,24 @@ import coil.compose.AsyncImage
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
-import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import okhttp3.*
 import org.example.frontend.NetworkConfig
 import org.example.frontend.R
-import java.io.IOException
+import org.example.frontend.quizzes.quiz1.components.LiquidProgressBar
 import java.util.Locale
 
-// Unified Thematic Colors
-private val ThemePinkText = Color(0xFFFF8FC4)
-private val ThemeDeepPurple = Color(0xFF7A3E66)
-private val SelectionGreen = Color(0xFF33CC66)
-private val OptionBorderDefault = Color(0x88FFD6EA)
-private val OptionCardDefault = Color(0x66FFFFFF)
-private val ErrorRed = Color(0xFFFF3333)
-
 @Composable
-fun QuestionL4_Shell(
-    sessionItem: SessionQuestion,
-    uiSequenceNumber: Int,
-    onNext: () -> Unit
+fun QuizQuestionL4_Shell(
+    questionData: QuizQuestion,
+    currentProgress: Float,
+    questionNumber: Int,
+    onAnswerSubmitted: (ByteArray?) -> Unit
 ) {
     val ip = NetworkConfig.SERVER_IP
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val darkSpaceNavy = Color(0xFF0A192F)
 
     val overlayBoolean = remember { mutableStateOf(false) }
     var isMainAudioPlaying by remember { mutableStateOf(false) }
@@ -79,15 +67,17 @@ fun QuestionL4_Shell(
             }.build()
     }
 
-    val primaryTargetClean = remember(sessionItem.targetWord) {
-        sessionItem.targetWord.trim().replaceFirstChar {
+    val primaryTargetClean = remember(questionData.targetWord) {
+        questionData.targetWord.trim().replaceFirstChar {
             if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
         }
     }
 
+    // Dynamic pool generation ensuring 4 distinct targets are rendered
     val shuffledArrows = remember(primaryTargetClean) {
         val masterPool = listOf("Up", "Down", "Left", "Right", "NE", "NW", "SE", "SW")
-        val distractors = masterPool.filter { it != primaryTargetClean }.shuffled().take(3)
+        val distractors = masterPool.filter { it.equals(primaryTargetClean, ignoreCase = true).not() }
+            .shuffled().take(3)
         (listOf(primaryTargetClean) + distractors).shuffled()
     }
 
@@ -95,127 +85,56 @@ fun QuestionL4_Shell(
         shuffledArrows.shuffled()
     }
 
-    var selectedArrow by remember { mutableStateOf<String?>(null) }
-    var selectedWord by remember { mutableStateOf<String?>(null) }
+    var selectedArrowToken by remember { mutableStateOf<String?>(null) }
+    var selectedWordToken by remember { mutableStateOf<String?>(null) }
 
-    val solvedMatches = remember { mutableStateListOf<String>() }
+    // Silently tracks item state resolution without interrupting quiz progress
+    val matchedPairs = remember { mutableStateListOf<String>() }
     val wrongArrows = remember { mutableStateListOf<String>() }
     val wrongWords = remember { mutableStateListOf<String>() }
 
-    // --- SILENT BACKEND VERIFICATION HANDLER ---
-    fun verifySelection(selectedDirection: String) {
-        val currentUser = FirebaseAuth.getInstance().currentUser ?: return
-        isVerifying = true
-
-        val client = OkHttpClient()
-        val requestBody = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("user_id", currentUser.uid)
-            .addFormDataPart("question_number", sessionItem.dbQuestionNumber.toString())
-            .addFormDataPart("target_word", primaryTargetClean)
-            .addFormDataPart("arrow_selected", selectedDirection)
-            .build()
-
-        val request = Request.Builder()
-            .url("http://$ip/verify_therapy_q4")
-            .post(requestBody)
-            .build()
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Log.e("FlaskAPI_L4", "Verify failed", e)
-                Handler(Looper.getMainLooper()).post {
-                    isVerifying = false
-                }
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                Handler(Looper.getMainLooper()).post {
-                    isVerifying = false
-                }
-            }
-        })
-    }
-
-    fun evaluatePair() {
-        val currentArrow = selectedArrow
-        val currentWord = selectedWord
+    // Evaluates localized matching states before dispatching payload upstream
+    fun processMatchingAttempt() {
+        val currentArrow = selectedArrowToken
+        val currentWord = selectedWordToken
 
         if (currentArrow != null && currentWord != null) {
-            if (currentArrow == currentWord) {
-                solvedMatches.add(currentArrow)
-                Toast.makeText(context, "Correct!", Toast.LENGTH_SHORT).show()
-
-                if (currentArrow == primaryTargetClean && !isVerifying) {
-                    scope.launch {
-                        delay(500)
-                        verifySelection(currentArrow)
-                    }
+            if (currentArrow.equals(currentWord, ignoreCase = true)) {
+                // Correct pairing logic
+                if (!matchedPairs.contains(currentArrow)) {
+                    matchedPairs.add(currentArrow)
                 }
             } else {
-                wrongArrows.add(currentArrow)
-                wrongWords.add(currentWord)
-                Toast.makeText(context, "Incorrect!", Toast.LENGTH_SHORT).show()
+                // Silently record error states to lock the matched items out
+                if (!wrongArrows.contains(currentArrow)) wrongArrows.add(currentArrow)
+                if (!wrongWords.contains(currentWord)) wrongWords.add(currentWord)
+            }
 
-                if ((currentArrow == primaryTargetClean || currentWord == primaryTargetClean) && !isVerifying) {
-                    scope.launch {
-                        delay(500)
-                        verifySelection(currentArrow)
+            // Check if all 4 target items on the board have been resolved (correctly or incorrectly)
+            val totalResolved = matchedPairs.size + wrongArrows.size
+            if (totalResolved >= 4) {
+                isVerifying = true
+                scope.launch {
+                    delay(800) // Brief pause so the user sees their final pairing complete
+
+                    // Determine final payload transmission based on primary target resolution
+                    val finalSubmissionPayload = if (matchedPairs.contains(primaryTargetClean)) {
+                        primaryTargetClean // Graded as Correct
+                    } else {
+                        "incorrect_match_submission" // Fails the str comparison check in Flask backend
                     }
+
+                    onAnswerSubmitted(finalSubmissionPayload.toByteArray())
                 }
             }
-            selectedArrow = null
-            selectedWord = null
+
+            // Reset active selection token buffers
+            selectedArrowToken = null
+            selectedWordToken = null
         }
     }
 
-    fun getBorderColor(itemType: String, direction: String): Color {
-        if (solvedMatches.contains(direction)) return ThemeDeepPurple
-        if (itemType == "arrow" && wrongArrows.contains(direction)) return ErrorRed
-        if (itemType == "word" && wrongWords.contains(direction)) return ErrorRed
-        if (itemType == "arrow" && selectedArrow == direction) return SelectionGreen
-        if (itemType == "word" && selectedWord == direction) return SelectionGreen
-        return OptionBorderDefault
-    }
-
-    fun isItemLocked(itemType: String, direction: String): Boolean {
-        if (solvedMatches.contains(direction)) return true
-        if (itemType == "arrow" && wrongArrows.contains(direction)) return true
-        if (itemType == "word" && wrongWords.contains(direction)) return true
-        return false
-    }
-
-    LaunchedEffect(overlayBoolean.value) {
-        if (overlayBoolean.value && sessionItem.audioUrl != null) {
-            isMainAudioPlaying = true
-            try {
-                MediaPlayer().apply {
-                    setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                            .setUsage(AudioAttributes.USAGE_MEDIA)
-                            .build()
-                    )
-                    setDataSource(sessionItem.audioUrl)
-                    prepareAsync()
-                    setOnPreparedListener { start() }
-                    setOnCompletionListener {
-                        release()
-                        isMainAudioPlaying = false
-                        overlayBoolean.value = false
-                    }
-                }
-            } catch (e: Exception) {
-                isMainAudioPlaying = false
-                overlayBoolean.value = false
-            }
-        } else if (overlayBoolean.value) {
-            delay(3000)
-            overlayBoolean.value = false
-        }
-    }
-
-    fun streamIndividualWordAudio(word: String) {
+    fun streamOptionAudio(word: String) {
         try {
             val cleanStr = word.lowercase(Locale.ROOT)
             val streamUrl = "http://$ip/static/audio/cached_word_v2_$cleanStr.wav"
@@ -237,22 +156,68 @@ fun QuestionL4_Shell(
                 }
             }
         } catch (e: Exception) {
-            Log.e("Audio_L4", "Individual stream failure", e)
+            Log.e("Audio_QuizL4", "Option stream error", e)
+        }
+    }
+
+    LaunchedEffect(overlayBoolean.value) {
+        if (overlayBoolean.value && questionData.audioUrl != null) {
+            isMainAudioPlaying = true
+            try {
+                MediaPlayer().apply {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .build()
+                    )
+                    setDataSource(questionData.audioUrl)
+                    prepareAsync()
+                    setOnPreparedListener { start() }
+                    setOnCompletionListener {
+                        release()
+                        isMainAudioPlaying = false
+                        overlayBoolean.value = false
+                    }
+                    setOnErrorListener { _, _, _ ->
+                        release()
+                        isMainAudioPlaying = false
+                        overlayBoolean.value = false
+                        true
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("Audio_QuizL4", "Main Playback error", e)
+                isMainAudioPlaying = false
+                overlayBoolean.value = false
+            }
+        } else if (overlayBoolean.value) {
+            delay(3000)
+            overlayBoolean.value = false
         }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // ---> UNIFORM LEVEL 1 THEME: Pastel Felt Flat-Lay Background <---
         Image(
-            painter = painterResource(id = R.drawable.level1_q1),
-            contentDescription = "Thematic Pastel Background",
+            painter = painterResource(R.drawable.quiz1_q4),
+            contentDescription = "Cosmic Testing Background",
             contentScale = ContentScale.FillBounds,
             modifier = Modifier.fillMaxSize()
         )
 
-        // ==========================================
-        // UNIFORM GLASSMORPHIC CARD (LEVEL 1 THEME)
-        // ==========================================
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 20.dp)
+                .align(Alignment.TopCenter)
+        ) {
+            LiquidProgressBar(
+                progress = currentProgress,
+                liquidColor = Color(0xFF00E5FF),
+                backgroundColor = darkSpaceNavy.copy(alpha = 0.6f)
+            )
+        }
+
         Box(
             modifier = Modifier
                 .width(330.dp)
@@ -260,38 +225,30 @@ fun QuestionL4_Shell(
                 .shadow(
                     elevation = 25.dp,
                     shape = RoundedCornerShape(38.dp),
-                    ambientColor = Color(0x40FFFFFF),
-                    spotColor = Color(0x55FF99CC)
+                    ambientColor = Color(0x3300E5FF),
+                    spotColor = Color(0x4400E5FF)
                 )
-                // OUTER GLASS GLOW
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color(0x66FFFFFF),
-                            Color(0x44FFFFFF),
-                            Color(0x22FFFFFF)
+                            Color(0xEEFFFFFF),
+                            Color(0xCCFFFFFF),
+                            Color(0xAAFFFFFF)
                         )
                     ),
                     shape = RoundedCornerShape(38.dp)
                 )
-                // GLASS BORDER
                 .border(
-                    width = 1.8.dp,
+                    width = 1.5.dp,
                     brush = Brush.linearGradient(
                         colors = listOf(
                             Color(0xAAFFFFFF),
-                            Color(0x55FFB6D9),
-                            Color(0x44FFFFFF)
+                            Color(0x6600E5FF),
+                            Color(0xAAFFFFFF)
                         )
                     ),
                     shape = RoundedCornerShape(38.dp)
                 )
-                // TRANSLUCENT GLASS EFFECT (40% Milky Opacity)
-                .background(
-                    color = Color(0x66FFFFFF),
-                    shape = RoundedCornerShape(38.dp)
-                )
-                .blur(0.3.dp)
                 .align(Alignment.Center)
         ) {
             Column(
@@ -299,25 +256,19 @@ fun QuestionL4_Shell(
                 verticalArrangement = Arrangement.SpaceEvenly,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // ==========================
-                // HEADER
-                // ==========================
                 Text(
-                    text = "Question $uiSequenceNumber",
+                    text = "Question $questionNumber",
                     style = TextStyle(
                         fontSize = 34.sp,
                         fontFamily = FontFamily(Font(R.font.windsol)),
                         fontWeight = FontWeight.Bold,
-                        color = ThemePinkText,
+                        color = darkSpaceNavy,
                         letterSpacing = 1.sp,
                         textAlign = TextAlign.Center
                     ),
                     modifier = Modifier.padding(top = 20.dp)
                 )
 
-                // ==========================
-                // QUESTION TEXT AREA
-                // ==========================
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -325,12 +276,12 @@ fun QuestionL4_Shell(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = sessionItem.instructionText,
+                        text = questionData.instructionText,
                         style = TextStyle(
                             fontSize = 24.sp,
                             fontFamily = FontFamily(Font(R.font.windsol)),
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFFF9ECF),
+                            color = darkSpaceNavy,
                             textAlign = TextAlign.Center
                         ),
                         modifier = Modifier.weight(1f).padding(vertical = 16.dp)
@@ -338,9 +289,6 @@ fun QuestionL4_Shell(
 
                     Spacer(modifier = Modifier.width(10.dp))
 
-                    // ===========================================
-                    // AUDIO BUTTON (UNIFORM LEVEL 1 SPEAKER ASSET)
-                    // ===========================================
                     IconButton(
                         onClick = { overlayBoolean.value = true },
                         enabled = !isMainAudioPlaying && !isVerifying,
@@ -348,15 +296,12 @@ fun QuestionL4_Shell(
                     ) {
                         Image(
                             modifier = Modifier.fillMaxSize(),
-                            painter = painterResource(id = R.drawable.level1_speaker),
-                            contentDescription = "Speaker"
+                            painter = painterResource(id = R.drawable.quiz1_speaker),
+                            contentDescription = "Instruction Speaker Trigger"
                         )
                     }
                 }
 
-                // ==========================
-                // DYNAMIC ARROW/WORD POOL
-                // ==========================
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -365,7 +310,7 @@ fun QuestionL4_Shell(
                 ) {
                     if (isVerifying) {
                         CircularProgressIndicator(
-                            color = ThemePinkText,
+                            color = darkSpaceNavy,
                             modifier = Modifier.size(45.dp)
                         )
                     } else {
@@ -374,7 +319,7 @@ fun QuestionL4_Shell(
                             verticalArrangement = Arrangement.spacedBy(35.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // Row 1: Rotated Arrows
+                            // Row 1: Rotated Graphic Vectors
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -392,92 +337,71 @@ fun QuestionL4_Shell(
                                         else -> 0f
                                     }
 
+                                    val isMatched = matchedPairs.contains(directionStr)
+                                    val isWrong = wrongArrows.contains(directionStr)
+                                    val isSelected = selectedArrowToken == directionStr
+
+                                    val borderColor = when {
+                                        isMatched -> Color(0xFF27B51A) // Correct Pair (Green)
+                                        isWrong -> Color(0xFFE53935)   // Mismatched Pair (Red)
+                                        isSelected -> Color(0xFF00E5FF)// Active Highlight (Cyan)
+                                        else -> Color(0x4400E5FF)      // Default Idle State
+                                    }
+                                    val cardBgColor = if (isSelected || isMatched || isWrong) Color(0x3300E5FF) else Color(0x33FFFFFF)
+
                                     ArrowItemRotated(
                                         rotationZ = rotationDegrees,
-                                        borderColor = getBorderColor("arrow", directionStr),
-                                        cardBgColor = if (selectedArrow == directionStr) Color(0xAAFFFFFF) else OptionCardDefault,
+                                        borderColor = borderColor,
+                                        cardBgColor = cardBgColor,
                                         onClick = {
-                                            if (!isItemLocked("arrow", directionStr) && !isVerifying) {
-                                                selectedArrow = directionStr
-                                                evaluatePair()
+                                            // Blocks selection if item is already mapped correctly or incorrectly
+                                            if (!isVerifying && !isMatched && !isWrong) {
+                                                selectedArrowToken = directionStr
+                                                processMatchingAttempt()
                                             }
                                         }
                                     )
                                 }
                             }
 
-                            // Row 2: Dynamic Word Tokens
+                            // Row 2: Text Tags mapping independent options securely
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
                                 shuffledWords.forEach { wordStr ->
+                                    val isMatched = matchedPairs.contains(wordStr)
+                                    val isWrong = wrongWords.contains(wordStr)
+                                    val isSelected = selectedWordToken == wordStr
+
+                                    val borderColor = when {
+                                        isMatched -> Color(0xFF27B51A)
+                                        isWrong -> Color(0xFFE53935)
+                                        isSelected -> Color(0xFF00E5FF)
+                                        else -> Color(0x4400E5FF)
+                                    }
+                                    val cardBgColor = if (isSelected || isMatched || isWrong) Color(0x3300E5FF) else Color(0x33FFFFFF)
+
                                     OptionCircleDynamic(
-                                        text = wordStr,
-                                        borderColor = getBorderColor("word", wordStr),
-                                        cardBgColor = if (selectedWord == wordStr) Color(0xAAFFFFFF) else OptionCardDefault,
+                                        text = wordStr.uppercase(Locale.ROOT),
+                                        borderColor = borderColor,
+                                        cardBgColor = cardBgColor,
                                         onOptionClick = {
-                                            if (!isItemLocked("word", wordStr) && !isVerifying) {
-                                                selectedWord = wordStr
-                                                evaluatePair()
+                                            if (!isVerifying && !isMatched && !isWrong) {
+                                                selectedWordToken = wordStr
+                                                processMatchingAttempt()
                                             }
                                         },
-                                        onSoundClick = {
-                                            streamIndividualWordAudio(wordStr)
-                                        }
+                                        onSoundClick = { streamOptionAudio(wordStr) }
                                     )
                                 }
                             }
                         }
                     }
                 }
-
-                val totalFinishedPairs = solvedMatches.size + wrongArrows.size
-
-                // ==========================
-                // NEXT BUTTON GATEKEEPER
-                // ==========================
-                Box(
-                    modifier = Modifier
-                        .padding(bottom = 22.dp)
-                        .shadow(elevation = 12.dp, shape = RoundedCornerShape(24.dp))
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = if (totalFinishedPairs >= 4) {
-                                    listOf(Color(0xFFFFA7D1), Color(0xFFFF84BF))
-                                } else {
-                                    listOf(Color.Gray, Color.LightGray)
-                                }
-                            ),
-                            shape = RoundedCornerShape(24.dp)
-                        )
-                        .border(width = 1.dp, color = Color(0xAAFFFFFF), shape = RoundedCornerShape(24.dp))
-                        .clickable {
-                            if (totalFinishedPairs >= 4 && !isVerifying) {
-                                onNext()
-                            } else {
-                                Toast.makeText(context, "Finish matching all items first!", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                        .padding(horizontal = 45.dp, vertical = 16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Next",
-                        style = TextStyle(
-                            fontSize = 28.sp,
-                            fontFamily = FontFamily(Font(R.font.windsol)),
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    )
-                }
             }
         }
 
-        // ==================================================
-        // UNIFORM CHARACTER OVERLAY (OVERFLOW FIXED)
-        // ==================================================
         if (overlayBoolean.value) {
             Box(
                 modifier = Modifier
@@ -489,26 +413,25 @@ fun QuestionL4_Shell(
                     modifier = Modifier.align(Alignment.CenterEnd).offset(y = (-120).dp)
                 ) {
                     Image(
-                        painter = painterResource(R.drawable.level1_speechbubble),
-                        contentDescription = "Speech Bubble"
+                        painter = painterResource(R.drawable.quiz1_speechbubble),
+                        contentDescription = "Instruction Dialog Prompt"
                     )
                     Text(
-                        text = sessionItem.instructionText,
-                        // ---> CRITICAL FIX: Increased padding to 32.dp and optimized font size to 15.sp prevents text clipping <---
+                        text = questionData.instructionText,
                         modifier = Modifier.padding(horizontal = 32.dp),
                         style = TextStyle(
                             fontSize = 15.sp,
                             fontFamily = FontFamily(Font(R.font.windsol)),
-                            color = ThemeDeepPurple,
+                            color = darkSpaceNavy,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
                         )
                     )
                 }
                 AsyncImage(
-                    model = ImageRequest.Builder(context).data(R.drawable.doraemon2).build(),
+                    model = ImageRequest.Builder(context).data(R.drawable.doraemon).build(),
                     imageLoader = imageLoader,
-                    contentDescription = "Character Helper GIF",
+                    contentDescription = "Helper Guidance Animation",
                     contentScale = ContentScale.FillBounds,
                     modifier = Modifier.size(327.dp).offset(y = (-120).dp).align(Alignment.BottomStart)
                 )
@@ -527,10 +450,10 @@ private fun ArrowItemRotated(
     Column(
         modifier = Modifier
             .shadow(
-                elevation = 8.dp,
+                elevation = 6.dp,
                 shape = RoundedCornerShape(22.dp),
-                ambientColor = Color(0x20000000),
-                spotColor = Color(0x40FF99CC)
+                ambientColor = Color(0x2000E5FF),
+                spotColor = Color(0x4000E5FF)
             )
             .width(58.dp)
             .height(58.dp)
@@ -544,7 +467,7 @@ private fun ArrowItemRotated(
     ) {
         Image(
             painter = painterResource(id = R.drawable.down2),
-            contentDescription = "Rotated Target Graphic",
+            contentDescription = "Target Graphic Vector",
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxSize()
@@ -564,10 +487,10 @@ private fun OptionCircleDynamic(
     Column(
         modifier = Modifier
             .shadow(
-                elevation = 8.dp,
+                elevation = 6.dp,
                 shape = RoundedCornerShape(22.dp),
-                ambientColor = Color(0x20000000),
-                spotColor = Color(0x40FF99CC)
+                ambientColor = Color(0x2000E5FF),
+                spotColor = Color(0x4000E5FF)
             )
             .width(58.dp)
             .height(58.dp)
@@ -583,10 +506,10 @@ private fun OptionCircleDynamic(
             modifier = Modifier.height(18.dp).fillMaxWidth(),
             text = text,
             style = TextStyle(
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 fontFamily = FontFamily(Font(R.font.windsol)),
                 fontWeight = FontWeight.Bold,
-                color = ThemeDeepPurple,
+                color = Color(0xFF0A192F),
                 textAlign = TextAlign.Center
             )
         )
@@ -596,8 +519,8 @@ private fun OptionCircleDynamic(
         ) {
             Image(
                 modifier = Modifier.fillMaxSize(),
-                painter = painterResource(id = R.drawable.level1_speaker),
-                contentDescription = "Stream specific word audio",
+                painter = painterResource(id = R.drawable.quiz1_speaker),
+                contentDescription = "Stream individual option voiceover",
                 contentScale = ContentScale.Fit
             )
         }

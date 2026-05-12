@@ -66,6 +66,17 @@ import org.example.frontend.therapy.level4.BouncyLevelScreen as BouncyLevelScree
 import org.example.frontend.therapy.level4.TherapySessionRouter4
 import org.example.frontend.therapy.level4.TherapyViewModel4
 
+
+///////QUIZZES
+
+//QUIZ 1
+import org.example.frontend.quizzes.quiz1.BouncyQuizIntroScreen
+import org.example.frontend.quizzes.quiz1.Quiz1Router
+import org.example.frontend.quizzes.quiz1.Quiz1ViewModel
+
+//Quiz2
+import org.example.frontend.therapy.Quiz2.QuestionL2Quiz as Quiz2
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -110,10 +121,11 @@ import java.io.IOException
 
 
 @Composable
-fun AppNavGraph(startDestination: String = "LoginScreen") {
+fun AppNavGraph(startDestination: String = "Quiz1Router") {
     val navController = rememberNavController()
     val sharedTherapyViewModel: TherapyViewModel = viewModel()
     val sharedTherapyViewModel4: TherapyViewModel4 = viewModel()
+    val sharedQuiz1ViewModel: Quiz1ViewModel = viewModel()
     NavHost(navController = navController, startDestination = startDestination) {
         composable("LoginScreen") {
             // pass navigation callback or navController to screen
@@ -331,7 +343,29 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
                 }
             )
         }
+        // ==========================================
+        // QUIZZES INTEGRATION
+        // ==========================================
 
+        composable("Quiz1Router") {
+            // Because Quiz1Router internally renders its BouncyIntro based on Quiz1Screen.Intro state,
+            // we mount the entire container interface here directly.
+            Quiz1Router(
+                viewModel = sharedQuiz1ViewModel,
+                onQuizComplete = { score, total ->
+                    // Optionally log score/total to your database analytics before navigating back
+                    Log.d("QuizCompletion", "Finished Quiz 1 with score: $score / $total")
+                    navController.navigate("HomePage") {
+                        popUpTo("HomePage") { inclusive = true }
+                    }
+                }
+            )
+        }
+        //Quiz2
+        //Quiz2
+        composable("Quiz2") {
+            Quiz2(onNextScreen = { navController.navigate("HomePage") })
+        }
         //////////////////////////////////////////////////
 
 

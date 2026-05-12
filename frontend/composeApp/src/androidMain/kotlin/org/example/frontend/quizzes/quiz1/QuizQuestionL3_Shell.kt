@@ -1,10 +1,8 @@
-package org.example.frontend.therapy.level1
+package org.example.frontend.quizzes.quiz1
 
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.os.Build.VERSION.SDK_INT
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -39,30 +37,27 @@ import coil.compose.AsyncImage
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
-import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import okhttp3.*
-import org.example.frontend.NetworkConfig
 import org.example.frontend.R
-import java.io.IOException
+import org.example.frontend.quizzes.quiz1.components.LiquidProgressBar
 import java.util.Locale
 
 @Composable
-fun QuestionL3_Shell(
-    sessionItem: SessionQuestion, // Injected dynamically from the Router
-    uiSequenceNumber: Int,        // Dynamic visual numbering (1, 2, 3...)
-    onNext: () -> Unit            // Advances the router array
+fun QuizQuestionL3_Shell(
+    questionData: QuizQuestion,
+    currentProgress: Float,
+    questionNumber: Int,
+    onAnswerSubmitted: (ByteArray?) -> Unit
 ) {
-    val ip = NetworkConfig.SERVER_IP
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val darkSpaceNavy = Color(0xFF0A192F)
 
     val overlayBoolean = remember { mutableStateOf(false) }
     var isAudioPlaying by remember { mutableStateOf(false) }
     var isVerifying by remember { mutableStateOf(false) }
 
-    // GIPHY HANDLER
     val imageLoader = remember {
         ImageLoader.Builder(context)
             .components {
@@ -75,22 +70,26 @@ fun QuestionL3_Shell(
             .build()
     }
 
-    // --- 1. DYNAMIC ASSET ROTATION ---
-    // Reads whatever the real target error is and rotates the single down2 graphic accordingly
-    val targetRotationDegrees = remember(sessionItem.targetWord) {
-        when (sessionItem.targetWord.trim().lowercase(Locale.ROOT)) {
+    // --- 1. EXPANDED ROTATIONAL ENGINE ---
+    // Evaluates both cardinal and intermediate target strings to rotate the base arrow accurately
+    val targetRotationDegrees = remember(questionData.targetWord) {
+        when (questionData.targetWord.trim().lowercase(Locale.ROOT)) {
             "down" -> 0f
+            "sw" -> 45f
             "left" -> 90f
+            "nw" -> 135f
             "up" -> 180f
+            "ne" -> 225f
             "right" -> 270f
+            "se" -> 315f
             else -> 0f
         }
     }
 
-    // --- 2. DYNAMIC ANSWER GENERATOR & SHUFFLER ---
-    // Takes the real target word, pairs it with an opposite distractor, and shuffles button placement
-    val buttonOptions = remember(sessionItem.targetWord) {
-        val correctWord = sessionItem.targetWord.trim().replaceFirstChar {
+    // --- 2. DYNAMIC DISTRACTOR GENERATOR ---
+    // Maps exact conceptual opposites for all 8 spatial paths to generate challenge options
+    val buttonOptions = remember(questionData.targetWord) {
+        val correctWord = questionData.targetWord.trim().replaceFirstChar {
             if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
         }
 
@@ -99,71 +98,31 @@ fun QuestionL3_Shell(
             "down" -> "Up"
             "left" -> "Right"
             "right" -> "Left"
-            else -> "Down" // Failsafe
-        }
+            "ne" -> "SW"
+            "nw" -> "SE"
+            "se" -> "NW"
+            "sw" -> "NE"
+            else -> "Down"
+        }.uppercase(Locale.ROOT) // Enforce clean capitalization mapping
 
-        listOf(correctWord, distractorWord).shuffled()
+        listOf(correctWord.uppercase(Locale.ROOT), distractorWord).shuffled()
     }
 
-    // Track button border colors dynamically based on the generated list size
     val buttonColors = remember(buttonOptions) {
         mutableStateListOf<Color>().apply {
-            buttonOptions.forEach { _ -> add(Color(0x55FFFFFF)) }
+            buttonOptions.forEach { _ -> add(Color(0x4400E5FF)) } // Subtly tinted base outline
         }
     }
 
-    // Track button background states dynamically
     val buttonBackgrounds = remember(buttonOptions) {
         mutableStateListOf<Color>().apply {
             buttonOptions.forEach { _ -> add(Color(0x33FFFFFF)) }
         }
     }
 
-    // --- 3. VERIFICATION HANDLER ---
-    fun verifySelection(selectedDirection: String) {
-        val currentUser = FirebaseAuth.getInstance().currentUser ?: run {
-            onNext()
-            return
-        }
-        isVerifying = true
-
-        val client = OkHttpClient()
-        val requestBody = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("user_id", currentUser.uid)
-            .addFormDataPart("question_number", sessionItem.dbQuestionNumber.toString())
-            .addFormDataPart("target_word", sessionItem.targetWord)
-            .addFormDataPart("arrow_selected", selectedDirection)
-            .build()
-
-        val request = Request.Builder()
-            .url("http://$ip/verify_therapy_q3")
-            .post(requestBody)
-            .build()
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Log.e("FlaskAPI_L3", "Verify failed", e)
-                Handler(Looper.getMainLooper()).post {
-                    isVerifying = false
-                    onNext()
-                }
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                val result = response.body?.string() ?: "No response"
-                Log.d("FlaskAPI_L3", "Response: $result")
-                Handler(Looper.getMainLooper()).post {
-                    isVerifying = false
-                    onNext()
-                }
-            }
-        })
-    }
-
-    // --- DYNAMIC AUDIO PLAYBACK ---
+    // Dynamic Text-to-Speech loop
     LaunchedEffect(overlayBoolean.value) {
-        if (overlayBoolean.value && sessionItem.audioUrl != null) {
+        if (overlayBoolean.value && questionData.audioUrl != null) {
             isAudioPlaying = true
             try {
                 MediaPlayer().apply {
@@ -173,7 +132,7 @@ fun QuestionL3_Shell(
                             .setUsage(AudioAttributes.USAGE_MEDIA)
                             .build()
                     )
-                    setDataSource(sessionItem.audioUrl)
+                    setDataSource(questionData.audioUrl)
                     prepareAsync()
                     setOnPreparedListener { start() }
                     setOnCompletionListener {
@@ -189,7 +148,7 @@ fun QuestionL3_Shell(
                     }
                 }
             } catch (e: Exception) {
-                Log.e("Audio_L3", "Playback error", e)
+                Log.e("Audio_QuizL3", "Playback error", e)
                 isAudioPlaying = false
                 overlayBoolean.value = false
             }
@@ -199,21 +158,31 @@ fun QuestionL3_Shell(
         }
     }
 
-    // --- UI LAYOUT ---
-    Box(
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        // ---> THEME BACKGROUND: Playful Pastel Flat-Lay <---
+    // MAIN VIEWPLANE
+    Box(modifier = Modifier.fillMaxSize()) {
+        // --- LAYER 1: Deep Space Aesthetic ---
         Image(
-            painter = painterResource(R.drawable.level1_q3),
-            contentDescription = "Background",
+            painter = painterResource(R.drawable.quiz1_q3), // Reuses uniform space backdrop safely
+            contentDescription = "Cosmic Testing Background",
             contentScale = ContentScale.FillBounds,
             modifier = Modifier.fillMaxSize()
         )
 
-        // ==========================================
-        // UNIFORM GLASSMORPHIC CARD (40% MILKY BASE)
-        // ==========================================
+        // --- LAYER 2: Absolute Overhead Progress Display ---
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 20.dp)
+                .align(Alignment.TopCenter)
+        ) {
+            LiquidProgressBar(
+                progress = currentProgress,
+                liquidColor = Color(0xFF00E5FF),
+                backgroundColor = darkSpaceNavy.copy(alpha = 0.6f)
+            )
+        }
+
+        // --- LAYER 3: Polished "White Glass" Container ---
         Box(
             modifier = Modifier
                 .width(330.dp)
@@ -221,38 +190,30 @@ fun QuestionL3_Shell(
                 .shadow(
                     elevation = 25.dp,
                     shape = RoundedCornerShape(38.dp),
-                    ambientColor = Color(0x40FFFFFF),
-                    spotColor = Color(0x55FF99CC)
+                    ambientColor = Color(0x3300E5FF),
+                    spotColor = Color(0x4400E5FF)
                 )
-                // OUTER GLASS GLOW
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color(0x66FFFFFF),
-                            Color(0x44FFFFFF),
-                            Color(0x22FFFFFF)
+                            Color(0xEEFFFFFF),
+                            Color(0xCCFFFFFF),
+                            Color(0xAAFFFFFF)
                         )
                     ),
                     shape = RoundedCornerShape(38.dp)
                 )
-                // GLASS BORDER
                 .border(
-                    width = 1.8.dp,
+                    width = 1.5.dp,
                     brush = Brush.linearGradient(
                         colors = listOf(
                             Color(0xAAFFFFFF),
-                            Color(0x55FFB6D9),
-                            Color(0x44FFFFFF)
+                            Color(0x6600E5FF),
+                            Color(0xAAFFFFFF)
                         )
                     ),
                     shape = RoundedCornerShape(38.dp)
                 )
-                // ---> TRANSLUCENT MILKY EFFECT: Perfectly matched 40% opacity base (0x66FFFFFF) <---
-                .background(
-                    color = Color(0xCCFFFFFF),
-                    shape = RoundedCornerShape(38.dp)
-                )
-                .blur(0.3.dp)
                 .align(Alignment.Center)
         ) {
             Column(
@@ -260,25 +221,21 @@ fun QuestionL3_Shell(
                 verticalArrangement = Arrangement.SpaceEvenly,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // ==========================
-                // HEADER
-                // ==========================
+                // Header Area
                 Text(
-                    text = "Question $uiSequenceNumber",
+                    text = "Question $questionNumber",
                     style = TextStyle(
                         fontSize = 34.sp,
                         fontFamily = FontFamily(Font(R.font.windsol)),
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFF8FC4), // Light pastel pink
+                        color = darkSpaceNavy,
                         letterSpacing = 1.sp,
                         textAlign = TextAlign.Center
                     ),
                     modifier = Modifier.padding(top = 20.dp)
                 )
 
-                // ==========================
-                // QUESTION TEXT AREA
-                // ==========================
+                // Prompt Text & Speaker Module
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -286,12 +243,12 @@ fun QuestionL3_Shell(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = sessionItem.instructionText,
+                        text = questionData.instructionText,
                         style = TextStyle(
                             fontSize = 24.sp,
                             fontFamily = FontFamily(Font(R.font.windsol)),
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFFF9ECF),
+                            color = darkSpaceNavy,
                             textAlign = TextAlign.Center
                         ),
                         modifier = Modifier.weight(1f).padding(vertical = 16.dp)
@@ -299,9 +256,6 @@ fun QuestionL3_Shell(
 
                     Spacer(modifier = Modifier.width(10.dp))
 
-                    // ===========================================
-                    // AUDIO BUTTON (UNIFORM LEVEL 1 SPEAKER ASSET)
-                    // ===========================================
                     IconButton(
                         onClick = { overlayBoolean.value = true },
                         enabled = !isAudioPlaying && !isVerifying,
@@ -309,15 +263,13 @@ fun QuestionL3_Shell(
                     ) {
                         Image(
                             modifier = Modifier.fillMaxSize(),
-                            painter = painterResource(id = R.drawable.level1_speaker),
-                            contentDescription = "Speaker"
+                            painter = painterResource(id = R.drawable.quiz1_speaker),
+                            contentDescription = "Speaker Trigger"
                         )
                     }
                 }
 
-                // ==========================
-                // DYNAMIC ROTATED ARROW
-                // ==========================
+                // Rotated Arrow Mount
                 Box(
                     modifier = Modifier
                         .width(130.dp)
@@ -326,13 +278,13 @@ fun QuestionL3_Shell(
                 ) {
                     if (isVerifying) {
                         CircularProgressIndicator(
-                            color = Color(0xFFFF8FC4),
+                            color = darkSpaceNavy,
                             modifier = Modifier.size(45.dp)
                         )
                     } else {
                         Image(
                             painter = painterResource(R.drawable.down2),
-                            contentDescription = "Target Graphic",
+                            contentDescription = "Target Evaluation Vector",
                             contentScale = ContentScale.Fit,
                             modifier = Modifier
                                 .fillMaxSize()
@@ -343,22 +295,20 @@ fun QuestionL3_Shell(
                     }
                 }
 
-                // ==========================
-                // DYNAMIC BUTTON STACK
-                // ==========================
+                // Interaction Option Array Stack
                 Column(
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(bottom = 10.dp)
+                    modifier = Modifier.padding(bottom = 20.dp)
                 ) {
                     buttonOptions.forEachIndexed { index, optionText ->
                         Box(
                             modifier = Modifier
                                 .shadow(
-                                    elevation = 8.dp,
+                                    elevation = 6.dp,
                                     shape = RoundedCornerShape(25.dp),
-                                    ambientColor = Color(0x20000000),
-                                    spotColor = Color(0x40FF99CC)
+                                    ambientColor = Color(0x2000E5FF),
+                                    spotColor = Color(0x4000E5FF)
                                 )
                                 .width(180.dp)
                                 .height(55.dp)
@@ -374,12 +324,14 @@ fun QuestionL3_Shell(
                                 .clipToBounds()
                                 .clickable {
                                     if (!isVerifying) {
-                                        // ---> THEMATIC HIGHLIGHT: Highlight buttons using energetic green #33CC66 to confirm choice <---
-                                        buttonColors[index] = Color(0xFF33CC66)
-                                        buttonBackgrounds[index] = Color(0x66FFFFFF)
+                                        isVerifying = true
+                                        // Cosmic Space Glow: Emphasizes user entry selection cleanly
+                                        buttonColors[index] = Color(0xFF00E5FF)
+                                        buttonBackgrounds[index] = Color(0x3300E5FF)
                                         scope.launch {
                                             delay(500)
-                                            verifySelection(optionText)
+                                            val answerPayload = optionText.toByteArray()
+                                            onAnswerSubmitted(answerPayload)
                                         }
                                     }
                                 },
@@ -391,21 +343,17 @@ fun QuestionL3_Shell(
                                     fontSize = 26.sp,
                                     fontFamily = FontFamily(Font(R.font.windsol)),
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFFF8FC4), // Matching font color
+                                    color = darkSpaceNavy,
                                     textAlign = TextAlign.Center,
                                 )
                             )
                         }
                     }
                 }
-
-
             }
-        } // END OF MAIN SHELL
+        }
 
-        // ==================================================
-        // UNIFORM CHARACTER OVERLAY (LEVEL 1 SPEECH BUBBLE)
-        // ==================================================
+        // --- LAYER 4: Companion Guidance Frame ---
         if (overlayBoolean.value) {
             Box(
                 modifier = Modifier
@@ -419,16 +367,16 @@ fun QuestionL3_Shell(
                         .offset(y = (-120).dp)
                 ) {
                     Image(
-                        painter = painterResource(R.drawable.level1_speechbubble),
-                        contentDescription = "Instruction prompt bubble",
+                        painter = painterResource(R.drawable.quiz1_speechbubble),
+                        contentDescription = "Instruction Dialog Prompt",
                     )
                     Text(
-                        text = sessionItem.instructionText,
+                        text = questionData.instructionText,
                         modifier = Modifier.padding(horizontal = 28.dp),
                         style = TextStyle(
                             fontSize = 16.sp,
                             fontFamily = FontFamily(Font(R.font.windsol)),
-                            color = Color(0xFF7A3E66),
+                            color = darkSpaceNavy,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
                         )
@@ -440,7 +388,7 @@ fun QuestionL3_Shell(
                         .data(R.drawable.doraemon)
                         .build(),
                     imageLoader = imageLoader,
-                    contentDescription = "Mascot helper guidance",
+                    contentDescription = "Helper Guidance Animation",
                     contentScale = ContentScale.FillBounds,
                     modifier = Modifier
                         .width(327.dp)
