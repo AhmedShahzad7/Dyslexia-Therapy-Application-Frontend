@@ -77,6 +77,12 @@ import org.example.frontend.quizzes.quiz1.Quiz1ViewModel
 //Quiz2
 import org.example.frontend.therapy.Quiz2.QuestionL2Quiz as Quiz2
 
+
+//QUIZ 3
+import org.example.frontend.quizzes.quiz3.QuizQuestion1
+import org.example.frontend.quizzes.quiz3.QuizQuestion2
+import org.example.frontend.quizzes.quiz3.QuizQuestion3
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -121,7 +127,7 @@ import java.io.IOException
 
 
 @Composable
-fun AppNavGraph(startDestination: String = "Quiz1Router") {
+fun AppNavGraph(startDestination: String = "LoginScreen") {
     val navController = rememberNavController()
     val sharedTherapyViewModel: TherapyViewModel = viewModel()
     val sharedTherapyViewModel4: TherapyViewModel4 = viewModel()
@@ -161,7 +167,6 @@ fun AppNavGraph(startDestination: String = "Quiz1Router") {
             )
         }
         composable("Levelselection") {
-
             Levelselection(
                 onNavigateHome = { navController.navigate("HomePage") },
                 onNavigateToLevel = { levelNum ->
@@ -171,9 +176,15 @@ fun AppNavGraph(startDestination: String = "Quiz1Router") {
                         3 -> navController.navigate("TherapyBouncyLevel3")
                         4 -> navController.navigate("BouncyLevelScreen4")
                     }
+                },
+                onNavigateToQuiz = { quizNum ->
+                    when (quizNum) {
+                        1 -> navController.navigate("Quiz1Router")
+                        2 -> navController.navigate("Quiz2")
+                        3 -> navController.navigate("QuizQuestion1")
+                    }
                 }
             )
-
         }
         composable("Question1") {
             // pass navigation callback or navController to screen
@@ -362,9 +373,28 @@ fun AppNavGraph(startDestination: String = "Quiz1Router") {
             )
         }
         //Quiz2
-        //Quiz2
         composable("Quiz2") {
             Quiz2(onNextScreen = { navController.navigate("HomePage") })
+        }
+        //QUIZ 3
+        composable("QuizQuestion1") {
+            QuizQuestion1(onNextScreen = {
+                navController.navigate("QuizQuestion2")
+            })
+        }
+
+        composable("QuizQuestion2") {
+            QuizQuestion2(onNextScreen = {
+                navController.navigate("QuizQuestion3")
+            })
+        }
+        composable("QuizQuestion3") {
+            QuizQuestion3(onNextScreen = {
+                // After the final quiz question, navigate to a completion screen or dashboard
+                navController.navigate("HomePage") {
+                    popUpTo("QuizQuestion1") { inclusive = true }
+                }
+            })
         }
         //////////////////////////////////////////////////
 

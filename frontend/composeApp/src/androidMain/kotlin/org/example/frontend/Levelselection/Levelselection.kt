@@ -44,7 +44,7 @@ val babyGemoyFontFamily = FontFamily(
     Font(R.font.baby_gemoy, FontWeight.Normal)
 )
 
-// Added 'levelNumber' (1-4) and 'isQuiz' flag to easily route clicks
+// Added 'quizNumber' to cleanly separate quiz targets from standard levels
 data class PlanetData(
     val imageRes: Int,
     val label: String,
@@ -53,16 +53,18 @@ data class PlanetData(
     val isLabelAbove: Boolean,
     val isLocked: Boolean = true,
     val levelNumber: Int = 0,
-    val isQuiz: Boolean = false
+    val isQuiz: Boolean = false,
+    val quizNumber: Int = 0
 )
 
 @Composable
 fun Levelselection(
     onNavigateHome: () -> Unit,
-    onNavigateToLevel: (Int) -> Unit // Unified routing callback
+    onNavigateToLevel: (Int) -> Unit,
+    onNavigateToQuiz: (Int) -> Unit // Added direct routing callback for Quizzes
 ) {
     val context = LocalContext.current
-    // State to track how many planets are unlocked (Index 0 is Level 1)
+    // Index mapping: 0=Lvl1, 1=Quiz1, 2=Lvl2, 3=Quiz2, 4=Lvl3, 5=Quiz3, 6=Lvl4
     var maxUnlockedIndex by remember { mutableIntStateOf(0) }
 
     // Force Landscape Orientation
@@ -78,7 +80,7 @@ fun Levelselection(
         }
     }
 
-    // Fetch Scores dynamically
+    // Fetch Scores & Progression Flags dynamically
     LaunchedEffect(Unit) {
         val currentUser = FirebaseAuth.getInstance().currentUser
         if (currentUser != null) {
@@ -102,38 +104,73 @@ fun Levelselection(
                         try {
                             val jsonObject = JSONObject(result)
                             if (jsonObject.optString("status") == "success") {
-                                val dataArray = jsonObject.getJSONArray("data")
+                                val dataArray = jsonObject.optJSONArray("data") ?: org.json.JSONArray()
                                 val level2Empty = jsonObject.optBoolean("Level2_Empty", false)
-                                val scores = mutableMapOf<String, Int>()
 
+                                val scores = mutableMapOf<String, Int>()
+                                var unlockedLevel2Flag = false
+                                var quiz3Passed75Flag = false
+
+                                // Parse standard scores & nested objects
                                 for (i in 0 until dataArray.length()) {
                                     val item = dataArray.getJSONObject(i)
-                                    val level = item.getString("level")
-                                    val scoreStr = item.getString("score")
+                                    val level = item.optString("level")
+                                    val scoreStr = item.optString("score", "0/0")
 
                                     val correct = scoreStr.split("/")[0].toIntOrNull() ?: 0
                                     scores[level] = correct
+
+                                    // Check Level_1 -> meta_status -> unlocked_level_2: true
+                                    if (level == "Level_1" && item.has("meta_status")) {
+                                        val metaStatus = item.optJSONObject("meta_status")
+                                        if (metaStatus != null && metaStatus.optBoolean("unlocked_level_2", false)) {
+                                            unlockedLevel2Flag = true
+                                        }
+                                    }
+
+                                    // Check Quiz_3 -> score_summary -> passed_75: true
+                                    if (level == "Quiz_3" && item.has("score_summary")) {
+                                        val scoreSummary = item.optJSONObject("score_summary")
+                                        if (scoreSummary != null && scoreSummary.optBoolean("passed_75", false)) {
+                                            quiz3Passed75Flag = true
+                                        }
+                                    }
                                 }
 
-                                // Score calculation logic remains intact
-                                var newMaxIndex = 0
-                                if ((scores["Level_1"] ?: 0) >= 3) {
-                                    newMaxIndex = 2 // Unlocks Quiz 1 & Level 2
+                                // --- STRICT PROGRESSION LOGIC ---
+
+                                var newMaxIndex = jsonObject.optInt("assessment_unlocked_index", 0)
+
+                                // 1. Level 1 -> Unlocks Quiz 1 (Index 1) & Level 2 (Index 2)
+                                if ((scores["Level_1"] ?: 0) >= 3 || unlockedLevel2Flag) {
+                                    if (newMaxIndex < 2) newMaxIndex = 2
+                                } else if ((scores["Level_1"] ?: 0) > 0) {
+                                    if (newMaxIndex < 1) newMaxIndex = 1
+                                }
+
+                                // 2. Level 2 -> Unlocks Quiz 2 (Index 3)
+                                if (newMaxIndex >= 2) {
                                     if ((scores["Level_2"] ?: 0) >= 3) {
-                                        newMaxIndex = 4 // Unlocks Quiz 2 & Level 3
-                                        if ((scores["Level_3"] ?: 0) >= 3) {
-                                            newMaxIndex = 6 // Unlocks Quiz 3 & Level 4
-                                        }
-                                    }
-                                    // If Level 2 is empty and score < 3
-                                    else if (level2Empty) {
-
-                                        newMaxIndex = 3 // Unlock ONLY Quiz 2
-                                        if((scores["Quiz_2"] ?: 0) >= 3){
-                                            newMaxIndex = 4   //Unlock Level3
-                                        }
+                                        if (newMaxIndex < 3) newMaxIndex = 3 // Unlocks Quiz 2
                                     }
                                 }
+
+                                // 2b. Quiz 2 -> Unlocks Level 3 (Index 4) INDEPENDENTLY
+                                // If Quiz 2 is passed (>=3), guarantee Level 3 unlocks even if Level 2 was skipped
+                                if ((scores["Quiz_2"] ?: 0) >= 3) {
+                                    if (newMaxIndex < 4) newMaxIndex = 4
+                                }
+
+                                // 3. Level 3 -> Unlocks Quiz 3 (Index 5) & Level 4 (Index 6)
+                                if (newMaxIndex >= 4) {
+                                    if ((scores["Level_3"] ?: 0) >= 3) {
+                                        if (newMaxIndex < 5) newMaxIndex = 5 // Unlocks Quiz 3
+                                    }
+                                    if (quiz3Passed75Flag) {
+                                        if (newMaxIndex < 6) newMaxIndex = 6 // Unlocks Level 4
+                                    }
+                                }
+
                                 Handler(Looper.getMainLooper()).post {
                                     maxUnlockedIndex = newMaxIndex
                                 }
@@ -147,14 +184,14 @@ fun Levelselection(
         }
     }
 
-    // Configured with target levels and quiz markers
+    // Fully wired with explicit target destinations
     val planets = listOf(
         PlanetData(R.drawable.p1, "LEVEL 1", Color(0xFF00006B), Color(0xFF27B51A), isLabelAbove = false, isLocked = maxUnlockedIndex < 0, levelNumber = 1),
-        PlanetData(R.drawable.p2, "QUIZ 1", Color(0xFF27B51A), Color(0xFFEB4335), isLabelAbove = true,  isLocked = maxUnlockedIndex < 1, isQuiz = true),
+        PlanetData(R.drawable.p2, "QUIZ 1", Color(0xFF27B51A), Color(0xFFEB4335), isLabelAbove = true,  isLocked = maxUnlockedIndex < 1, isQuiz = true, quizNumber = 1),
         PlanetData(R.drawable.p3, "LEVEL 2", Color(0xFFF8335D), Color(0xFF27B51A), isLabelAbove = false, isLocked = maxUnlockedIndex < 2, levelNumber = 2),
-        PlanetData(R.drawable.p4, "QUIZ 2", Color(0xFFFBBC05), Color(0xFF4285F4), isLabelAbove = true,  isLocked = maxUnlockedIndex < 3, isQuiz = true),
+        PlanetData(R.drawable.p4, "QUIZ 2", Color(0xFFFBBC05), Color(0xFF4285F4), isLabelAbove = true,  isLocked = maxUnlockedIndex < 3, isQuiz = true, quizNumber = 2),
         PlanetData(R.drawable.p5, "LEVEL 3", Color(0xFF8A38F5), Color(0xFFFFE100), isLabelAbove = true,  isLocked = maxUnlockedIndex < 4, levelNumber = 3),
-        PlanetData(R.drawable.p6, "QUIZ 3", Color(0xFF4285F4), Color(0xFF000278), isLabelAbove = true,  isLocked = maxUnlockedIndex < 5, isQuiz = true),
+        PlanetData(R.drawable.p6, "QUIZ 3", Color(0xFF4285F4), Color(0xFF000278), isLabelAbove = true,  isLocked = maxUnlockedIndex < 5, isQuiz = true, quizNumber = 3),
         PlanetData(R.drawable.p7, "LEVEL 4", Color(0xFF27B51A), Color(0xFF1517B2), isLabelAbove = false, isLocked = maxUnlockedIndex < 6, levelNumber = 4)
     )
 
@@ -184,9 +221,10 @@ fun Levelselection(
                         if (planet.isLocked) {
                             Toast.makeText(context, "Complete previous levels to unlock!", Toast.LENGTH_SHORT).show()
                         } else if (planet.isQuiz) {
-                            Toast.makeText(context, "Quiz is under development. Coming Soon!", Toast.LENGTH_SHORT).show()
+                            // Route directly to respective dynamic Quiz instances
+                            onNavigateToQuiz(planet.quizNumber)
                         } else {
-                            // Route directly to the respective level therapy folder
+                            // Route to respective Therapy levels
                             onNavigateToLevel(planet.levelNumber)
                         }
                     }
@@ -222,7 +260,7 @@ fun PlanetNode(planet: PlanetData, modifier: Modifier = Modifier, onClick: () ->
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .size(100.dp)
-                .clickable { onClick() } // Trigger click logic here
+                .clickable { onClick() }
         ) {
             Image(
                 painter = painterResource(id = planet.imageRes),

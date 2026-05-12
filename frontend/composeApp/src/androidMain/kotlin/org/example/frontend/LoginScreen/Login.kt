@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.layout.ContentScale
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.CustomCredential
@@ -44,6 +45,7 @@ import kotlinx.coroutines.launch
 fun LoginScreen(onSignUpScreen: () -> Unit,onhomescreen:()->Unit,navController: NavHostController,onassessmentScreen:()->Unit,
                 viewModel: LoginViewModel=androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
+    val backgroundPainter = painterResource(id = R.drawable.loginbackgroundimage)
     fun navigatetosignup()
     {
         onSignUpScreen()
@@ -201,9 +203,10 @@ fun LoginScreen(onSignUpScreen: () -> Unit,onhomescreen:()->Unit,navController: 
     )
     {
         Image(
-                painter = painterResource(id = R.drawable.loginbackgroundimage),
+                painter =backgroundPainter,
                 contentDescription = null,
-            modifier = Modifier.fillMaxSize().graphicsLayer(rotationZ = 90f).graphicsLayer(scaleX = 2.5f, scaleY =2f ),
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop // 2. Add this line
         )
         Column(
             verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.Top),
