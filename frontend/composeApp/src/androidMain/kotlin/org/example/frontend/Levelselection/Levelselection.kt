@@ -119,10 +119,18 @@ fun Levelselection(
                                 var newMaxIndex = 0
                                 if ((scores["Level_1"] ?: 0) >= 3) {
                                     newMaxIndex = 2 // Unlocks Quiz 1 & Level 2
-                                    if ((scores["Level_2"] ?: 0) >= 3 || level2Empty) {
+                                    if ((scores["Level_2"] ?: 0) >= 3) {
                                         newMaxIndex = 4 // Unlocks Quiz 2 & Level 3
                                         if ((scores["Level_3"] ?: 0) >= 3) {
                                             newMaxIndex = 6 // Unlocks Quiz 3 & Level 4
+                                        }
+                                    }
+                                    // If Level 2 is empty and score < 3
+                                    else if (level2Empty) {
+
+                                        newMaxIndex = 3 // Unlock ONLY Quiz 2
+                                        if((scores["Quiz_2"] ?: 0) >= 3){
+                                            newMaxIndex = 4   //Unlock Level3
                                         }
                                     }
                                 }
