@@ -127,7 +127,7 @@ import java.io.IOException
 
 
 @Composable
-fun AppNavGraph(startDestination: String = "HomePage") {
+fun AppNavGraph(startDestination: String = "LoginScreen") {
     val navController = rememberNavController()
     val sharedTherapyViewModel: TherapyViewModel = viewModel()
     val sharedTherapyViewModel4: TherapyViewModel4 = viewModel()
