@@ -127,7 +127,7 @@ import java.io.IOException
 
 
 @Composable
-fun AppNavGraph(startDestination: String = "LoginScreen") {
+fun AppNavGraph(startDestination: String = "HomePage") {
     val navController = rememberNavController()
     val sharedTherapyViewModel: TherapyViewModel = viewModel()
     val sharedTherapyViewModel4: TherapyViewModel4 = viewModel()
@@ -183,10 +183,11 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
                         2 -> navController.navigate("Quiz2")
                         3 -> navController.navigate("QuizQuestion1")
                     }
-                }
+                },
+
             )
         }
-        composable("Question1") {
+       composable("Question1") {
             // pass navigation callback or navController to screen
             Question1(onNextScreen = { navController.navigate("Question2") })
         }
@@ -320,21 +321,24 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
         }
 
         composable("QuestionL13") {
-            QuestionL13(onNextScreen = { navController.navigate("QuestionL14") })
+            QuestionL13(onNextScreen = { navController.navigate("QauestionL14") })
         }
 
         composable("QuestionL14") {
             QuestionL14(onNextScreen = { navController.navigate("QuestionL15") })
         }
-
+        // Inside AppNavGraph.kt -> Level 3 Therapy execution mappings
         composable("QuestionL15") {
             QuestionL15(onNextScreen = {
-                // Navigate back to HomePage or CartoonSelectionScreen when Therapy Level 3 is finished
                 navController.navigate("HomePage") {
-                    popUpTo("HomePage") { inclusive = true }
+                    // Strips interface layouts cleanly up to the selection menu
+                    popUpTo("Levelselection") { inclusive = true }
+                    launchSingleTop = true
                 }
             })
         }
+
+
 
 
         //LEVEL 4
@@ -403,14 +407,19 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
             CartoonSelectionScreen(onNextScreen = { navController.navigate("HomePage") })
         }
         composable("progress_tracking") {
+            // Extract the active user context safely before routing updates down to ViewModel
+            val currentUser = FirebaseAuth.getInstance().currentUser
+            val userId = currentUser?.uid ?: ""
+
             ProgressTrackingScreen(
+                userId = userId, // Injects the active session ID string down to initialize ViewModel calls
                 onHomeClick = {
                     navController.navigate("HomePage") {
                         popUpTo("HomePage") { inclusive = true }
                     }
                 },
                 onNavigateToErrorList = {
-                    navController.navigate("error_list") // Route to the new screen
+                    navController.navigate("error_list")
                 }
             )
         }

@@ -9,7 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import org.example.frontend.R
 
 private val DarkBlue = Color(0xFF000278)
@@ -35,9 +36,18 @@ private val RedProgress = Color(0xFFF02323)
 
 @Composable
 fun ProgressTrackingScreen(
+    userId: String, // Ensure you pass down the active user credentials
     onHomeClick: () -> Unit,
-    onNavigateToErrorList: () -> Unit // NEW: Parameter to handle clicking the error list card
+    onNavigateToErrorList: () -> Unit,
+    viewModel: ProgressTrackingViewModel = viewModel()
 ) {
+    val state by viewModel.uiState.collectAsState()
+
+    // Trigger loading exactly when the screen initializes
+    LaunchedEffect(userId) {
+        viewModel.loadData(userId)
+    }
+
     MaterialTheme {
         Box(modifier = Modifier.fillMaxSize()) {
             Image(
@@ -72,7 +82,7 @@ fun ProgressTrackingScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Yellow Card (Progress Tracking)
+                    // Yellow Dynamic Percentage Card
                     Box(
                         modifier = Modifier
                             .width(160.dp)
@@ -95,7 +105,7 @@ fun ProgressTrackingScreen(
                             )
                             Spacer(modifier = Modifier.height(10.dp))
                             Text(
-                                text = "10%",
+                                text = state.overallProgress, // Dynamic Binding
                                 style = TextStyle(
                                     fontSize = 28.sp,
                                     fontFamily = FontFamily(Font(R.font.windsol)),
@@ -106,15 +116,13 @@ fun ProgressTrackingScreen(
                         }
                     }
 
-                    // Dark Blue Card (Common Error test List)
+                    // Common Error List Button
                     Box(
                         modifier = Modifier
                             .width(160.dp)
                             .height(155.dp)
                             .background(color = DarkBlue, shape = RoundedCornerShape(30.dp))
-                            .clickable {
-                                onNavigateToErrorList() // Triggers navigation when clicked
-                            },
+                            .clickable { onNavigateToErrorList() },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -139,9 +147,28 @@ fun ProgressTrackingScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(15.dp)
                 ) {
-                    StatCard(PinkCard, "LEVEL ATTEMPT", OrangeProgress, 1.0f, OrangeProgress, "100%", 180)
-                    StatCard(LightBlueCard, "QUIZ ATTEMPT", DarkBlue, 0.50f, DarkBlue, "50%", 180)
+                    // Injecting actual state metrics down to custom cards
+                    StatCard(
+                        backgroundColor = PinkCard,
+                        title = "LEVEL ATTEMPT",
+                        titleColor = OrangeProgress,
+                        progress = state.levelFloat,
+                        progressColor = OrangeProgress,
+                        progressText = state.levelText,
+                        height = 180
+                    )
 
+                    StatCard(
+                        backgroundColor = LightBlueCard,
+                        title = "QUIZ ATTEMPT",
+                        titleColor = DarkBlue,
+                        progress = state.quizFloat,
+                        progressColor = DarkBlue,
+                        progressText = state.quizText,
+                        height = 180
+                    )
+
+                    // Dynamic Screen Time Card
                     Box(
                         modifier = Modifier
                             .width(350.dp)
@@ -150,26 +177,43 @@ fun ProgressTrackingScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "SCREEN TIME",
-                                style = TextStyle(
-                                    fontSize = 26.sp,
-                                    fontFamily = FontFamily(Font(R.font.windsol)),
-                                    color = RedProgress
+                            Row(
+                                modifier = Modifier.width(300.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "SCREEN TIME",
+                                    style = TextStyle(
+                                        fontSize = 22.sp,
+                                        fontFamily = FontFamily(Font(R.font.windsol)),
+                                        color = RedProgress
+                                    )
                                 )
-                            )
-                            Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = state.screenTimeText, // Displays live minutes
+                                    style = TextStyle(
+                                        fontSize = 18.sp,
+                                        fontFamily = FontFamily(Font(R.font.windsol)),
+                                        fontWeight = FontWeight.Bold,
+                                        color = RedProgress
+                                    )
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
 
+                            // Custom Linear Progress implementation
                             Box(
                                 modifier = Modifier
                                     .width(300.dp)
                                     .height(25.dp)
                                     .border(1.dp, Color.Black, RoundedCornerShape(12.dp))
-                                    .background(Color.White, RoundedCornerShape(12.dp))
+                                    .background(Color.White, RoundedCornerShape(12.dp)),
+                                contentAlignment = Alignment.CenterStart
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .fillMaxWidth(0.8f)
+                                        .fillMaxWidth(state.screenTimeFloat) // Variable bounds logic
                                         .fillMaxHeight()
                                         .background(RedProgress, RoundedCornerShape(12.dp))
                                 )
@@ -179,7 +223,7 @@ fun ProgressTrackingScreen(
                 }
             }
 
-            // Bottom Navigation Bar
+            // Bottom Bar
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -212,6 +256,7 @@ fun ProgressTrackingScreen(
     }
 }
 
+// Ensure StatCard matches your provided signature exactly
 @Composable
 fun StatCard(
     backgroundColor: Color,
@@ -254,13 +299,13 @@ fun StatCard(
                     modifier = Modifier.fillMaxSize()
                 )
                 CircularProgressIndicator(
-                    progress = progress,
+                    progress = progress, // Wired dynamically
                     color = progressColor,
                     strokeWidth = 12.dp,
                     modifier = Modifier.fillMaxSize()
                 )
                 Text(
-                    text = progressText,
+                    text = progressText, // Wired dynamically
                     style = TextStyle(
                         fontSize = 24.sp,
                         fontFamily = FontFamily(Font(R.font.windsol)),

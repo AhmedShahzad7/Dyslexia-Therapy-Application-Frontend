@@ -38,6 +38,7 @@ import org.example.frontend.NetworkConfig
 import org.example.frontend.R
 import org.json.JSONObject
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 // Define the Baby Gemoy font
 val babyGemoyFontFamily = FontFamily(
@@ -86,7 +87,10 @@ fun Levelselection(
         if (currentUser != null) {
             val userId = currentUser.uid
             val ip = NetworkConfig.SERVER_IP
-            val client = OkHttpClient()
+            val client = OkHttpClient.Builder()
+                .connectTimeout(15, TimeUnit.SECONDS) // Give it more time to handshake
+                .readTimeout(15, TimeUnit.SECONDS)
+                .build()
 
             val request = Request.Builder()
                 .url("http://$ip/api/scores/$userId")
@@ -96,80 +100,21 @@ fun Levelselection(
             client.newCall(request).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
                     Log.e("LevelSelection", "Failed to fetch scores", e)
+                    Log.d("FlaskAPI", "Response: error")
                 }
 
                 override fun onResponse(call: Call, response: Response) {
                     val result = response.body?.string()
+
                     if (response.isSuccessful && result != null) {
                         try {
+                            Log.d("FlaskAPI", "Response: $result")
                             val jsonObject = JSONObject(result)
                             if (jsonObject.optString("status") == "success") {
-                                val dataArray = jsonObject.optJSONArray("data") ?: org.json.JSONArray()
-                                val level2Empty = jsonObject.optBoolean("Level2_Empty", false)
-
-                                val scores = mutableMapOf<String, Int>()
-                                var unlockedLevel2Flag = false
-                                var quiz3Passed75Flag = false
-
-                                // Parse standard scores & nested objects
-                                for (i in 0 until dataArray.length()) {
-                                    val item = dataArray.getJSONObject(i)
-                                    val level = item.optString("level")
-                                    val scoreStr = item.optString("score", "0/0")
-
-                                    val correct = scoreStr.split("/")[0].toIntOrNull() ?: 0
-                                    scores[level] = correct
-
-                                    // Check Level_1 -> meta_status -> unlocked_level_2: true
-                                    if (level == "Level_1" && item.has("meta_status")) {
-                                        val metaStatus = item.optJSONObject("meta_status")
-                                        if (metaStatus != null && metaStatus.optBoolean("unlocked_level_2", false)) {
-                                            unlockedLevel2Flag = true
-                                        }
-                                    }
-
-                                    // Check Quiz_3 -> score_summary -> passed_75: true
-                                    if (level == "Quiz_3" && item.has("score_summary")) {
-                                        val scoreSummary = item.optJSONObject("score_summary")
-                                        if (scoreSummary != null && scoreSummary.optBoolean("passed_75", false)) {
-                                            quiz3Passed75Flag = true
-                                        }
-                                    }
-                                }
 
                                 // --- STRICT PROGRESSION LOGIC ---
-
-                                var newMaxIndex = jsonObject.optInt("assessment_unlocked_index", 0)
-
-                                // 1. Level 1 -> Unlocks Quiz 1 (Index 1) & Level 2 (Index 2)
-                                if ((scores["Level_1"] ?: 0) >= 3 || unlockedLevel2Flag) {
-                                    if (newMaxIndex < 2) newMaxIndex = 2
-                                } else if ((scores["Level_1"] ?: 0) > 0) {
-                                    if (newMaxIndex < 1) newMaxIndex = 1
-                                }
-
-                                // 2. Level 2 -> Unlocks Quiz 2 (Index 3)
-                                if (newMaxIndex >= 2) {
-                                    if ((scores["Level_2"] ?: 0) >= 3) {
-                                        if (newMaxIndex < 3) newMaxIndex = 3 // Unlocks Quiz 2
-                                    }
-                                }
-
-                                // 2b. Quiz 2 -> Unlocks Level 3 (Index 4) INDEPENDENTLY
-                                // If Quiz 2 is passed (>=3), guarantee Level 3 unlocks even if Level 2 was skipped
-                                if ((scores["Quiz_2"] ?: 0) >= 3) {
-                                    if (newMaxIndex < 4) newMaxIndex = 4
-                                }
-
-                                // 3. Level 3 -> Unlocks Quiz 3 (Index 5) & Level 4 (Index 6)
-                                if (newMaxIndex >= 4) {
-                                    if ((scores["Level_3"] ?: 0) >= 3) {
-                                        if (newMaxIndex < 5) newMaxIndex = 5 // Unlocks Quiz 3
-                                    }
-                                    if (quiz3Passed75Flag) {
-                                        if (newMaxIndex < 6) newMaxIndex = 6 // Unlocks Level 4
-                                    }
-                                }
+                                // Directly read the absolute index evaluated by the backend server
+                                val newMaxIndex = jsonObject.optInt("assessment_unlocked_index", 0)
 
                                 Handler(Looper.getMainLooper()).post {
                                     maxUnlockedIndex = newMaxIndex

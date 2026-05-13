@@ -44,6 +44,7 @@ import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -53,14 +54,10 @@ import org.example.frontend.R
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Data
-// ─────────────────────────────────────────────────────────────────────────────
+// Data Models
 data class CardItemBox(val id: Int, val word: String, val length: Int)
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Bitmap helpers
-// ─────────────────────────────────────────────────────────────────────────────
+// Bitmap Compression Handlers
 fun createBitmapFromPaths(paths: List<Path>, width: Int, height: Int): Bitmap {
     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
     val canvas = android.graphics.Canvas(bitmap)
@@ -121,21 +118,6 @@ fun sendBatchImagesToTherapy(
     })
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// QUESTION L15  —  "Write the word below in the box given"
-//
-// STABLE ARCHITECTURE:
-//   • wordList  — plain List<String>, set once after fetch, never mutated
-//   • currentIndex — Int state, only incremented in Submit callback
-//   • key(currentIndex) wraps the ENTIRE card UI including ALL letter state
-//     so every remember{} inside is guaranteed fresh for each new word
-//   • NO mutable var inside composition body (the old `var offset = 0`
-//     inside forEach was the crash root cause — it reset on every recompose
-//     causing wrong index→pathList mapping → ArrayIndexOutOfBoundsException)
-//   • Letter paths stored as List<MutableList<Path>> created inside remember{}
-//     which is scoped to the key(currentIndex) block — each word gets a
-//     completely independent set of path lists
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun QuestionL15(onNextScreen: () -> Unit) {
     val CURRENT_QUESTION_NUMBER = 15
@@ -152,18 +134,24 @@ fun QuestionL15(onNextScreen: () -> Unit) {
     var wordList     by remember { mutableStateOf<List<String>>(emptyList()) }
     var currentIndex by remember { mutableStateOf(0) }
 
+    // Explicit state monitor preventing navigation race condition drops
+    var isFinished   by remember { mutableStateOf(false) }
+
     val currentUser = FirebaseAuth.getInstance().currentUser
 
     DisposableEffect(Unit) { onDispose { waterSound.release() } }
 
-    // Navigate when all words done — runs after currentIndex increments
+    // Safe Navigation Monitor
     LaunchedEffect(currentIndex, wordList.size) {
         if (!isLoading && wordList.isNotEmpty() && currentIndex >= wordList.size) {
-            onNextScreen()
+            if (!isFinished) {
+                isFinished = true
+                onNextScreen()
+            }
         }
     }
 
-    // ── Fetch words from backend ──────────────────────────────────────────────
+    // Dynamic Network Resource Handlers
     LaunchedEffect(Unit) {
         currentUser?.uid?.let { uid ->
             val client  = OkHttpClient()
@@ -185,7 +173,10 @@ fun QuestionL15(onNextScreen: () -> Unit) {
                             val json = JSONObject(body ?: "")
                             if (json.optBoolean("mastered", false)) {
                                 isLoading = false
-                                onNextScreen()
+                                if (!isFinished) {
+                                    isFinished = true
+                                    onNextScreen()
+                                }
                                 return@post
                             }
                             questionText    = json.optString("instruction_text", questionText)
@@ -209,7 +200,7 @@ fun QuestionL15(onNextScreen: () -> Unit) {
         }
     }
 
-    // ── Audio overlay ─────────────────────────────────────────────────────────
+    // Audio Trigger Arrays
     LaunchedEffect(isAudioOverlay) {
         if (!isAudioOverlay) return@LaunchedEffect
         if (!dynamicAudioUrl.isNullOrEmpty()) {
@@ -247,7 +238,7 @@ fun QuestionL15(onNextScreen: () -> Unit) {
         }.build()
     }
 
-    // ── UI ────────────────────────────────────────────────────────────────────
+    // Container Interface Framework
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter            = painterResource(R.drawable.therapy_level3),
@@ -256,12 +247,15 @@ fun QuestionL15(onNextScreen: () -> Unit) {
             modifier           = Modifier.fillMaxSize()
         )
 
-        if (isLoading) {
+        // 1. Loading and Terminating Scopes
+        if (isLoading || isFinished) {
             CircularProgressIndicator(
                 modifier = Modifier.align(Alignment.Center),
                 color    = Color(0xFFF8335D)
             )
-        } else if (wordList.isNotEmpty() && currentIndex < wordList.size) {
+        }
+        // 2. Active Validation View scopes
+        else if (wordList.isNotEmpty() && currentIndex < wordList.size) {
 
             Box(
                 modifier = Modifier
@@ -273,7 +267,7 @@ fun QuestionL15(onNextScreen: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterVertically),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Question number
+                    // Title Banner
                     Row(
                         modifier = Modifier.fillMaxWidth().height(80.dp),
                         horizontalArrangement = Arrangement.Center,
@@ -291,7 +285,7 @@ fun QuestionL15(onNextScreen: () -> Unit) {
                         )
                     }
 
-                    // Instruction + speaker
+                    // Prompt & Companion Display
                     Row(
                         modifier = Modifier
                             .fillMaxWidth().height(90.dp)
@@ -324,20 +318,13 @@ fun QuestionL15(onNextScreen: () -> Unit) {
                         }
                     }
 
-                    // ── Card area — key(currentIndex) resets ALL state below ──
-                    // This is the critical wrapper: every remember{} inside this
-                    // key block is destroyed and recreated when currentIndex changes.
-                    // That means letterPaths, isChecking, currentPath in each
-                    // LetterBox15 are ALL fresh for every new word automatically.
+                    // Safe UI Wrapper Block
                     key(currentIndex) {
-
-                        val word        = wordList[currentIndex]
+                        // Coerce bounds explicitly to shield Compose allocations during pops
+                        val safeIndex   = currentIndex.coerceIn(0, wordList.size - 1)
+                        val word        = wordList[safeIndex]
                         var isChecking  by remember { mutableStateOf(false) }
 
-                        // ── Per-letter path lists ─────────────────────────────
-                        // Created ONCE inside this key block's remember{}.
-                        // word.indices gives stable indices 0..word.length-1.
-                        // No mutable var counter in the composition body.
                         val letterPaths = remember {
                             word.indices.map {
                                 mutableStateListOf<Path>() as MutableList<Path>
@@ -349,7 +336,6 @@ fun QuestionL15(onNextScreen: () -> Unit) {
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
 
-                            // Target word display
                             Text(
                                 text  = word,
                                 style = TextStyle(
@@ -361,10 +347,6 @@ fun QuestionL15(onNextScreen: () -> Unit) {
                                 )
                             )
 
-                            // ── Letter boxes ─────────────────────────────────
-                            // Use word.indices directly so each LetterBox15 is
-                            // composed with a stable, compile-time-known index.
-                            // NO var offset counter — that was the crash cause.
                             val rowSize = 5
                             val numRows = (word.length + rowSize - 1) / rowSize
                             Column(
@@ -390,14 +372,15 @@ fun QuestionL15(onNextScreen: () -> Unit) {
                                 }
                             }
 
-                            // Submit button
+                            // Trigger Submissions Natively
+                            val scope = rememberCoroutineScope() // Capture UI execution scope
                             Box(
                                 modifier = Modifier
                                     .width(140.dp).height(46.dp)
                                     .background(Color(0xFFF8335D), RoundedCornerShape(30.dp))
                                     .clickable(enabled = !isChecking) {
                                         isChecking = true
-                                        val boxPx     = 150
+                                        val boxPx = 150
                                         val imageList = letterPaths.map { paths ->
                                             bitmapToByteArray(
                                                 createBitmapFromPaths(
@@ -407,30 +390,42 @@ fun QuestionL15(onNextScreen: () -> Unit) {
                                         }
                                         currentUser?.uid?.let { uid ->
                                             sendBatchImagesToTherapy(uid, word, imageList) { _ ->
-                                                currentIndex++
+                                                // Guarantee UI mutations map securely back to the Main thread
+                                                scope.launch {
+                                                    if (!isFinished) {
+                                                        isFinished = true
+                                                        onNextScreen()
+                                                    }
+                                                }
                                             }
-                                        } ?: run { currentIndex++ }
+                                        } ?: run {
+                                            scope.launch {
+                                                if (!isFinished) {
+                                                    isFinished = true
+                                                    onNextScreen()
+                                                }
+                                            }
+                                        }
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text  = if (isChecking) "Checking..." else "Submit",
+                                    text = if (isChecking) "Checking..." else "Submit",
                                     style = TextStyle(
-                                        fontSize   = 22.sp,
+                                        fontSize = 22.sp,
                                         fontFamily = FontFamily(Font(R.font.windsol)),
                                         fontWeight = FontWeight(400),
-                                        color      = Color.White,
-                                        textAlign  = TextAlign.Center
+                                        color = Color.White,
+                                        textAlign = TextAlign.Center
                                     )
                                 )
                             }
                         }
                     }
-                    // ── end key(currentIndex) ─────────────────────────────────
                 }
             }
 
-            // Doraemon audio overlay
+            // Overlay Companion Guidance Frame
             if (isAudioOverlay) {
                 Box(modifier = Modifier.fillMaxSize().background(Color(0x4FFFFFFF))) {
                     Box(
@@ -462,17 +457,19 @@ fun QuestionL15(onNextScreen: () -> Unit) {
                 }
             }
         }
+        // 3. Fallback Completion State Framework
+        // Preserves the primary anchor context during Controller screen transition paths
+        else {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Color(0xFFF8335D))
+            }
+        }
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// LetterBox15
-//
-// Receives pathList: MutableList<Path> which at runtime is a SnapshotStateList.
-// Calling pathList.add() notifies Compose → Canvas redraws immediately.
-// currentPath is a new Path object on every drag point so Compose detects
-// the reference change and redraws the live in-progress stroke.
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun LetterBox15(
     char: Char,
@@ -512,7 +509,6 @@ fun LetterBox15(
             },
         contentAlignment = Alignment.Center
     ) {
-        // Faint hint letter behind the drawing area
         Text(
             text  = char.toString(),
             style = TextStyle(
