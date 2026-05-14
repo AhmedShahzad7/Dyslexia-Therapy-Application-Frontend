@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
 import okhttp3.*
 import org.example.frontend.NetworkConfig
+import org.example.frontend.R // Ensure R is imported for resource resolution
 import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -17,6 +18,9 @@ class TherapyViewModel4 : ViewModel() {
     val sessionQuestions = mutableStateListOf<SessionQuestion4>()
     val isLoading = mutableStateOf(true)
     val errorMessage = mutableStateOf<String?>(null)
+
+    // ---> NEW: Dynamic Cartoon State (Defaults to a stable fallback) <---
+    val cartoonResId = mutableStateOf(R.drawable.mickey1)
 
     fun initSession() {
         val uid = FirebaseAuth.getInstance().currentUser?.uid
@@ -57,6 +61,10 @@ class TherapyViewModel4 : ViewModel() {
                         try {
                             val json = JSONObject(responseData)
                             if (json.optString("status") == "success") {
+                                // ---> NEW: Safely parse cartoon choice from backend payload <---
+                                val selectedCartoonStr = json.optString("cartoon_selection", "mickey")
+                                cartoonResId.value = mapCartoonStringToDrawable(selectedCartoonStr)
+
                                 val jsonArray = json.getJSONArray("questions")
                                 val fetchedList = mutableListOf<SessionQuestion4>()
 
@@ -69,7 +77,7 @@ class TherapyViewModel4 : ViewModel() {
                                             uiSlotAssigned = item.optInt("ui_slot_assigned", 1),
                                             targetLetter = item.optString("target_letter", "b"),
 
-                                            // ---> CRITICAL FIX: Explicitly map paired mini-questions <---
+                                            // Explicitly map paired mini-questions
                                             miniQuestions = if (item.has("mini_questions")) {
                                                 val qArray = item.getJSONArray("mini_questions")
                                                 List(qArray.length()) { idx ->
@@ -108,6 +116,17 @@ class TherapyViewModel4 : ViewModel() {
                 }
             }
         })
+    }
+
+    // ---> NEW: Type-Safe Resource Mapper <---
+    private fun mapCartoonStringToDrawable(cartoon: String): Int {
+        return when (cartoon.lowercase().trim()) {
+            "mickey" -> R.drawable.mickey1
+            "pooh" -> R.drawable.pooh1
+            "tom" -> R.drawable.tom1
+            "duffy" -> R.drawable.duffy2
+            else -> R.drawable.mickey1
+        }
     }
 
     fun getQuestionForIndex(arrayIndex: Int): SessionQuestion4? {

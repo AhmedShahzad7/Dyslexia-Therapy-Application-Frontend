@@ -19,7 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.clipToBounds // ---> CRITICAL FIX: Explicitly imported required drawing extension <---
+import androidx.compose.ui.draw.clipToBounds // Explicitly imported required drawing extension
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -50,6 +50,7 @@ import java.io.IOException
 fun QuestionL2_Shell(
     sessionItem: SessionQuestion, // DIRECT INJECTION: Received from the dynamic Router
     uiSequenceNumber: Int,        // Dynamic visual numbering (1, 2, 3...)
+    cartoonResId: Int,            // ---> INJECTED DYNAMIC GIF ID <---
     onNext: () -> Unit            // Instructs the router to advance the array progression
 ) {
     val ip = NetworkConfig.SERVER_IP
@@ -394,10 +395,13 @@ fun QuestionL2_Shell(
                         )
                     )
                 }
+                // ---> SWAPPED STATIC DORAEMON FOR DYNAMIC CARTOON ID <---
                 AsyncImage(
-                    model = ImageRequest.Builder(context).data(R.drawable.doraemon2).build(),
+                    model = ImageRequest.Builder(context)
+                        .data(cartoonResId) // Hooks up directly to the resolved character state
+                        .build(),
                     imageLoader = imageLoader,
-                    contentDescription = "Character Overlay GIF",
+                    contentDescription = "Dynamic Helper GIF",
                     contentScale = ContentScale.FillBounds,
                     modifier = Modifier.size(327.dp).offset(y = (-120).dp).align(Alignment.BottomStart)
                 )

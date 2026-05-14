@@ -108,16 +108,20 @@ fun sendBatchImagesToTherapy(
 
     client.newCall(request).enqueue(object : Callback {
         override fun onFailure(call: Call, e: IOException) {
-            Handler(Looper.getMainLooper()).post { onResult("Error: ${e.message}") }
+            val errorMsg = "Error: ${e.message}"
+            Handler(Looper.getMainLooper()).post { onResult(errorMsg) }
         }
         override fun onResponse(call: Call, response: Response) {
+            // ---> CRITICAL FIX: Read the stream on the background thread first <---
+            val responseData = response.body?.string() ?: "No response"
+
+            // THEN post the safe string back to the UI thread
             Handler(Looper.getMainLooper()).post {
-                onResult(response.body?.string() ?: "No response")
+                onResult(responseData)
             }
         }
     })
 }
-
 @Composable
 fun QuestionL15(onNextScreen: () -> Unit) {
     val CURRENT_QUESTION_NUMBER = 15
@@ -126,10 +130,14 @@ fun QuestionL15(onNextScreen: () -> Unit) {
     val waterSound = remember { WaterSoundPlayer(context) }
 
     var isLoading       by remember { mutableStateOf(true) }
-    var questionText    by remember { mutableStateOf("Write the word\n below in the box\n given") }
+    // Clean inline UI defaults optimized for auto-wrap scaling layouts
+    var questionText    by remember { mutableStateOf("Write the word below in the box given") }
     var dynamicAudioUrl by remember { mutableStateOf<String?>(null) }
     var isAudioPlaying  by remember { mutableStateOf(false) }
     var isAudioOverlay  by remember { mutableStateOf(false) }
+
+    // ---> 1. INDEPENDENT LOCAL STATE FOR CARTOON GIF <---
+    var cartoonResId by remember { mutableStateOf(R.drawable.mickey1) }
 
     var wordList     by remember { mutableStateOf<List<String>>(emptyList()) }
     var currentIndex by remember { mutableStateOf(0) }
@@ -138,6 +146,17 @@ fun QuestionL15(onNextScreen: () -> Unit) {
     var isFinished   by remember { mutableStateOf(false) }
 
     val currentUser = FirebaseAuth.getInstance().currentUser
+
+    // ---> 2. LOCAL RESOURCE MAPPER <---
+    fun mapCartoonStringToDrawable(cartoon: String): Int {
+        return when (cartoon.lowercase().trim()) {
+            "mickey" -> R.drawable.mickey1
+            "pooh" -> R.drawable.pooh1
+            "tom" -> R.drawable.tom1
+            "duffy" -> R.drawable.duffy2
+            else -> R.drawable.mickey1
+        }
+    }
 
     DisposableEffect(Unit) { onDispose { waterSound.release() } }
 
@@ -163,6 +182,7 @@ fun QuestionL15(onNextScreen: () -> Unit) {
                 override fun onFailure(call: Call, e: IOException) {
                     Handler(Looper.getMainLooper()).post {
                         wordList  = listOf("goat", "frog", "page", "plug")
+                        cartoonResId = R.drawable.mickey1
                         isLoading = false
                     }
                 }
@@ -179,6 +199,11 @@ fun QuestionL15(onNextScreen: () -> Unit) {
                                 }
                                 return@post
                             }
+
+                            // ---> 3. PARSE AND MAP SELECTION LOCALLY <---
+                            val helperStr = json.optString("cartoon_selection", "mickey")
+                            cartoonResId = mapCartoonStringToDrawable(helperStr)
+
                             questionText    = json.optString("instruction_text", questionText)
                             dynamicAudioUrl = if (json.isNull("audio_url")) null
                             else json.getString("audio_url")
@@ -196,6 +221,7 @@ fun QuestionL15(onNextScreen: () -> Unit) {
             })
         } ?: run {
             wordList  = listOf("goat", "frog", "page", "plug")
+            cartoonResId = R.drawable.mickey1
             isLoading = false
         }
     }
@@ -259,7 +285,7 @@ fun QuestionL15(onNextScreen: () -> Unit) {
 
             Box(
                 modifier = Modifier
-                    .width(299.dp).height(570.dp)
+                    .width(310.dp).height(570.dp) // Adjusted width for spatial balance
                     .background(Color(0xC7FFFFFF), RoundedCornerShape(35.dp))
                     .align(Alignment.Center)
             ) {
@@ -285,42 +311,44 @@ fun QuestionL15(onNextScreen: () -> Unit) {
                         )
                     }
 
-                    // Prompt & Companion Display
+                    // Prompt & Speaker Display
                     Row(
                         modifier = Modifier
-                            .fillMaxWidth().height(90.dp)
-                            .background(Color.Transparent),
-                        horizontalArrangement = Arrangement.Center,
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .height(90.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween, // Pushes items to structural boundaries safely
                         verticalAlignment     = Alignment.CenterVertically
                     ) {
                         Text(
                             text  = questionText,
+                            modifier = Modifier.weight(1f).padding(end = 8.dp),
                             style = TextStyle(
-                                fontSize   = 23.sp,
+                                fontSize   = 20.sp, // Optimized from 23.sp to prevent box clipping
                                 fontFamily = FontFamily(Font(R.font.windsol)),
-                                fontWeight = FontWeight(400),
+                                fontWeight = FontWeight.SemiBold,
                                 color      = Color(0xFFF8335D),
                                 textAlign  = TextAlign.Center
                             )
                         )
-                        Box(modifier = Modifier.offset(x = 10.dp)) {
-                            IconButton(
-                                onClick = { isAudioOverlay = true },
-                                enabled = !isAudioPlaying
-                            ) {
-                                Image(
-                                    modifier           = Modifier.size(35.dp),
-                                    painter            = painterResource(id = R.drawable.sound_button1),
-                                    contentDescription = "Speaker",
-                                    contentScale       = ContentScale.None
-                                )
-                            }
+
+                        // Visible Action-Button Wrapper Fix
+                        IconButton(
+                            onClick = { isAudioOverlay = true },
+                            enabled = !isAudioPlaying,
+                            modifier = Modifier.size(48.dp) // Absolute responsive action scaling constraints
+                        ) {
+                            Image(
+                                modifier           = Modifier.fillMaxSize(),
+                                painter            = painterResource(id = R.drawable.sound_button1),
+                                contentDescription = "Speaker Toggle",
+                                contentScale       = ContentScale.Fit
+                            )
                         }
                     }
 
                     // Safe UI Wrapper Block
                     key(currentIndex) {
-                        // Coerce bounds explicitly to shield Compose allocations during pops
                         val safeIndex   = currentIndex.coerceIn(0, wordList.size - 1)
                         val word        = wordList[safeIndex]
                         var isChecking  by remember { mutableStateOf(false) }
@@ -373,7 +401,8 @@ fun QuestionL15(onNextScreen: () -> Unit) {
                             }
 
                             // Trigger Submissions Natively
-                            val scope = rememberCoroutineScope() // Capture UI execution scope
+                            // Trigger Submissions Natively
+                            val scope = rememberCoroutineScope()
                             Box(
                                 modifier = Modifier
                                     .width(140.dp).height(46.dp)
@@ -390,11 +419,17 @@ fun QuestionL15(onNextScreen: () -> Unit) {
                                         }
                                         currentUser?.uid?.let { uid ->
                                             sendBatchImagesToTherapy(uid, word, imageList) { _ ->
-                                                // Guarantee UI mutations map securely back to the Main thread
                                                 scope.launch {
-                                                    if (!isFinished) {
-                                                        isFinished = true
-                                                        onNextScreen()
+                                                    // ---> CRITICAL FIX: Loop through the remaining words <---
+                                                    if (currentIndex < wordList.size - 1) {
+                                                        currentIndex++
+                                                        isChecking = false // Unlock the button for the next word
+                                                    } else {
+                                                        // Only navigate away when all words are done
+                                                        if (!isFinished) {
+                                                            isFinished = true
+                                                            onNextScreen()
+                                                        }
                                                     }
                                                 }
                                             }
@@ -425,30 +460,36 @@ fun QuestionL15(onNextScreen: () -> Unit) {
                 }
             }
 
-            // Overlay Companion Guidance Frame
+            // Overlay Companion Guidance Frame Layout
             if (isAudioOverlay) {
                 Box(modifier = Modifier.fillMaxSize().background(Color(0x4FFFFFFF))) {
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier         = Modifier.align(Alignment.CenterEnd).offset(y = (-120).dp)
                     ) {
-                        Image(painterResource(R.drawable.speech_bubble3), "")
+                        Image(painterResource(R.drawable.speech_bubble3), contentDescription = "Speech Bubble")
+
+                        // Optimized bounding padding prevents external overflow
                         Text(
                             text  = questionText,
+                            modifier = Modifier.padding(horizontal = 32.dp),
                             style = TextStyle(
-                                fontSize   = 23.sp,
+                                fontSize   = 16.sp, // Downscaled down safely from 23.sp to anchor cleanly inside bubble borders
                                 fontFamily = FontFamily(Font(R.font.windsol)),
-                                fontWeight = FontWeight(400),
+                                fontWeight = FontWeight.Bold,
                                 color      = Color(0xFFF8335D),
                                 textAlign  = TextAlign.Center
                             )
                         )
                     }
+
+                    // ---> 4. USE LOCAL STATE IN ASYNCIMAGE <---
                     AsyncImage(
                         model              = ImageRequest.Builder(context)
-                            .data(R.drawable.doraemon2).build(),
+                            .data(cartoonResId) // Passes active local dynamic state identifier cleanly
+                            .build(),
                         imageLoader        = imageLoader,
-                        contentDescription = "Doraemon",
+                        contentDescription = "Dynamic Guidance Character Helper Animation",
                         contentScale       = ContentScale.FillBounds,
                         modifier           = Modifier
                             .size(327.dp).offset(y = (-120).dp)
@@ -458,7 +499,6 @@ fun QuestionL15(onNextScreen: () -> Unit) {
             }
         }
         // 3. Fallback Completion State Framework
-        // Preserves the primary anchor context during Controller screen transition paths
         else {
             Box(
                 modifier = Modifier.fillMaxSize(),

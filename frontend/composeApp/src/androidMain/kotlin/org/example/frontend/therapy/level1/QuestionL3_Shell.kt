@@ -52,6 +52,7 @@ import java.util.Locale
 fun QuestionL3_Shell(
     sessionItem: SessionQuestion, // Injected dynamically from the Router
     uiSequenceNumber: Int,        // Dynamic visual numbering (1, 2, 3...)
+    cartoonResId: Int,            // ---> INJECTED DYNAMIC GIF ID <---
     onNext: () -> Unit            // Advances the router array
 ) {
     val ip = NetworkConfig.SERVER_IP
@@ -398,8 +399,6 @@ fun QuestionL3_Shell(
                         }
                     }
                 }
-
-
             }
         } // END OF MAIN SHELL
 
@@ -435,9 +434,10 @@ fun QuestionL3_Shell(
                     )
                 }
 
+                // ---> SWAPPED STATIC DORAEMON FOR DYNAMIC ASSET ID <---
                 AsyncImage(
                     model = ImageRequest.Builder(context)
-                        .data(R.drawable.doraemon)
+                        .data(cartoonResId) // Connects perfectly to the passed integer resource ID
                         .build(),
                     imageLoader = imageLoader,
                     contentDescription = "Mascot helper guidance",

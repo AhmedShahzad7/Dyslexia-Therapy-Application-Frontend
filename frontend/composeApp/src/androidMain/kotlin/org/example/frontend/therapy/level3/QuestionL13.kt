@@ -36,11 +36,13 @@ import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import okhttp3.*
 import okio.IOException
 import org.example.frontend.NetworkConfig
 import org.example.frontend.R
 import org.json.JSONObject
+import java.util.concurrent.atomic.AtomicInteger
 
 // ─────────────────────────────────────────────────────────────────────────────
 // QUESTION L13  —  "Circle the words that rhyme the same"
@@ -50,11 +52,16 @@ fun QuestionL13(onNextScreen: () -> Unit) {
     val CURRENT_QUESTION_NUMBER = 13
     val ip = NetworkConfig.SERVER_IP
     val context = LocalContext.current
+    val scope = rememberCoroutineScope() // Captures UI thread scope safely
 
     var isLoading by remember { mutableStateOf(true) }
+    var isSubmitting by remember { mutableStateOf(false) } // Protects against double-tap navigation crashes
     var questionText by remember { mutableStateOf("Circle the words that\n rhyme same") }
     var dynamicAudioUrl by remember { mutableStateOf<String?>(null) }
     var isAudioPlaying by remember { mutableStateOf(false) }
+
+    // ---> 1. INDEPENDENT LOCAL STATE FOR CARTOON GIF <---
+    var cartoonResId by remember { mutableStateOf(R.drawable.mickey1) }
 
     val overlay_boolean = remember { mutableStateOf(false) }
     val tempStore = remember { mutableStateListOf<String>() }
@@ -64,10 +71,22 @@ fun QuestionL13(onNextScreen: () -> Unit) {
 
     val currentUser = FirebaseAuth.getInstance().currentUser
 
+    // ---> 2. LOCAL RESOURCE MAPPER <---
+    fun mapCartoonStringToDrawable(cartoon: String): Int {
+        return when (cartoon.lowercase().trim()) {
+            "mickey" -> R.drawable.mickey1
+            "pooh" -> R.drawable.pooh1
+            "tom" -> R.drawable.tom1
+            "duffy" -> R.drawable.duffy2
+            else -> R.drawable.mickey1
+        }
+    }
+
     fun setupDefaults() {
         if (gridWords.isEmpty()) {
             gridWords = listOf("lap", "cap", "bun", "map", "tub", "bat", "nut", "nap", "man", "bag", "tap", "bed")
             targetWord = "lap"
+            cartoonResId = R.drawable.mickey1
         }
     }
 
@@ -88,6 +107,11 @@ fun QuestionL13(onNextScreen: () -> Unit) {
                         if (responseData != null) {
                             try {
                                 val json = JSONObject(responseData)
+
+                                // ---> 3. PARSE AND MAP SELECTION LOCALLY <---
+                                val helperStr = json.optString("cartoon_selection", "mickey")
+                                cartoonResId = mapCartoonStringToDrawable(helperStr)
+
                                 dynamicAudioUrl = if (json.isNull("audio_url")) null else json.getString("audio_url")
                                 targetWord = json.optString("target_word", "")
                                 val dataArray = json.optJSONArray("data")
@@ -112,24 +136,36 @@ fun QuestionL13(onNextScreen: () -> Unit) {
     }
 
     fun toggleSelection(word: String) {
+        if (isSubmitting) return // Prevent interaction modification while processing routes
         if (tempStore.contains(word)) tempStore.remove(word) else tempStore.add(word)
     }
 
+    // Fully synchronized thread-safe navigation wrapper
     fun submitAndNavigate() {
+        if (isSubmitting) return
+        isSubmitting = true // Lock interaction immediately
+
         currentUser?.uid?.let { userId ->
             if (tempStore.isEmpty()) {
-                submitTherapyAnswer(userId, CURRENT_QUESTION_NUMBER, targetWord, true) { onNextScreen() }
+                submitTherapyAnswer(userId, CURRENT_QUESTION_NUMBER, targetWord, true) {
+                    scope.launch { onNextScreen() } // Route strictly on Main thread
+                }
                 return@let
             }
-            var remaining = tempStore.size
+
+            // Thread-safe atomic counter prevents async parallel race conditions
+            val remaining = AtomicInteger(tempStore.size)
             tempStore.toList().forEach { word ->
                 val isCorrect = word.takeLast(2) == targetWord.takeLast(2)
                 submitTherapyAnswer(userId, CURRENT_QUESTION_NUMBER, targetWord, isCorrect) {
-                    remaining--
-                    if (remaining == 0) onNextScreen()
+                    if (remaining.decrementAndGet() == 0) {
+                        scope.launch { onNextScreen() }
+                    }
                 }
             }
-        } ?: onNextScreen()
+        } ?: run {
+            scope.launch { onNextScreen() }
+        }
     }
 
     LaunchedEffect(overlay_boolean.value) {
@@ -186,8 +222,21 @@ fun QuestionL13(onNextScreen: () -> Unit) {
                         }
                     }
                 }
-                Box(modifier = Modifier.align(Alignment.BottomEnd).padding(end = 10.dp, bottom = 10.dp).background(Color(0xFFF8335D), RoundedCornerShape(15.dp)).clickable { submitAndNavigate() }.padding(horizontal = 20.dp, vertical = 5.dp)) {
-                    Text(text = "Next", style = TextStyle(fontSize = 26.sp, fontFamily = FontFamily(Font(R.font.windsol)), fontWeight = FontWeight.Bold, color = Color.White))
+
+                // Safe Interactive UI wrapper rendering active submission states
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 10.dp, bottom = 10.dp)
+                        .background(if (isSubmitting) Color.Gray else Color(0xFFF8335D), RoundedCornerShape(15.dp))
+                        .clickable(enabled = !isSubmitting) { submitAndNavigate() }
+                        .padding(horizontal = 20.dp, vertical = 5.dp)
+                ) {
+                    if (isSubmitting) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Text(text = "Next", style = TextStyle(fontSize = 26.sp, fontFamily = FontFamily(Font(R.font.windsol)), fontWeight = FontWeight.Bold, color = Color.White))
+                    }
                 }
             }
             if (overlay_boolean.value) {
@@ -196,7 +245,17 @@ fun QuestionL13(onNextScreen: () -> Unit) {
                         Image(painter = painterResource(R.drawable.speech_bubble3), contentDescription = "")
                         Text(text = questionText, style = TextStyle(fontSize = 25.sp, fontFamily = FontFamily(Font(R.font.windsol)), fontWeight = FontWeight(400), color = Color(0xFFF8335D), textAlign = TextAlign.Center))
                     }
-                    AsyncImage(model = ImageRequest.Builder(context).data(R.drawable.doraemon).build(), imageLoader = imageLoader, contentDescription = "Doraemon", contentScale = ContentScale.FillBounds, modifier = Modifier.size(327.dp).offset(y = (-120).dp).align(Alignment.BottomStart))
+
+                    // ---> 4. USE LOCAL STATE IN ASYNCIMAGE <---
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(cartoonResId) // Passes the reactive local resource ID directly
+                            .build(),
+                        imageLoader = imageLoader,
+                        contentDescription = "Dynamic Companion Guidance Animation",
+                        contentScale = ContentScale.FillBounds,
+                        modifier = Modifier.size(327.dp).offset(y = (-120).dp).align(Alignment.BottomStart)
+                    )
                 }
             }
         }

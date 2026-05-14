@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
 import okhttp3.*
 import org.example.frontend.NetworkConfig
+import org.example.frontend.R // Ensure R is imported for resource resolution
 import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -18,6 +19,9 @@ class TherapyViewModel : ViewModel() {
     val sessionQuestions = mutableStateListOf<SessionQuestion>()
     val isLoading = mutableStateOf(true)
     val errorMessage = mutableStateOf<String?>(null)
+
+    // ---> NEW: Dynamic Cartoon State (Defaults to a fallback character) <---
+    val cartoonResId = mutableStateOf(R.drawable.mickey1)
 
     fun initSession() {
         val uid = FirebaseAuth.getInstance().currentUser?.uid
@@ -31,7 +35,6 @@ class TherapyViewModel : ViewModel() {
         errorMessage.value = null
         val ip = NetworkConfig.SERVER_IP
 
-        // Extended timeouts prevent Android from dropping connections prematurely
         val client = OkHttpClient.Builder()
             .connectTimeout(60, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
@@ -58,6 +61,10 @@ class TherapyViewModel : ViewModel() {
                         try {
                             val json = JSONObject(responseData)
                             if (json.optString("status") == "success") {
+                                // ---> NEW: Safely parse cartoon choice from backend payload <---
+                                val selectedCartoonStr = json.optString("cartoon_selection", "mickey")
+                                cartoonResId.value = mapCartoonStringToDrawable(selectedCartoonStr)
+
                                 val jsonArray = json.getJSONArray("questions")
                                 val fetchedList = mutableListOf<SessionQuestion>()
 
@@ -67,16 +74,10 @@ class TherapyViewModel : ViewModel() {
                                         SessionQuestion(
                                             dbQuestionNumber = item.getInt("db_question_number"),
                                             questionType = item.getString("question_type"),
-
-                                            // ---> CRITICAL PARSING ADDITION <---
-                                            // Reads the assigned UI slot safely. Defaults to 1 if missing.
                                             uiSlotAssigned = item.optInt("ui_slot_assigned", 1),
-
                                             targetWord = item.getString("target_word"),
                                             instructionText = item.getString("instruction_text"),
                                             audioUrl = if (item.isNull("audio_url")) null else item.getString("audio_url"),
-
-                                            // Securely tracks whether this item writes to analytics counters
                                             isGenuineError = item.optBoolean("is_genuine_error", true)
                                         )
                                     )
@@ -103,7 +104,17 @@ class TherapyViewModel : ViewModel() {
         })
     }
 
-    // Helper to pull the specific question object for a sequence index
+    // ---> NEW: Type-Safe Resource Mapper <---
+    private fun mapCartoonStringToDrawable(cartoon: String): Int {
+        return when (cartoon.lowercase().trim()) {
+            "mickey" -> R.drawable.mickey1
+            "pooh" -> R.drawable.pooh1   // Adjusted typo from pooh.1gif
+            "tom" -> R.drawable.tom1
+            "duffy" -> R.drawable.duffy2
+            else -> R.drawable.mickey1   // Guaranteed stable fallback
+        }
+    }
+
     fun getQuestionForIndex(arrayIndex: Int): SessionQuestion? {
         return if (arrayIndex < sessionQuestions.size) sessionQuestions[arrayIndex] else null
     }
