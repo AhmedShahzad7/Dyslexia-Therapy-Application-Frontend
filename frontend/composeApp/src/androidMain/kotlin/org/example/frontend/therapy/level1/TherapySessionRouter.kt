@@ -14,6 +14,9 @@ fun TherapySessionRouter(
     var currentIndex by remember { mutableStateOf(0) }
     val currentItem = viewModel.getQuestionForIndex(currentIndex)
 
+    // Read the dynamically mapped character resource ID directly from the ViewModel state
+    val helperCartoonResId = viewModel.cartoonResId.value
+
     // 1. GRADUATION / COMPLETION CHECK
     if (currentItem == null) {
         LaunchedEffect(Unit) {
@@ -31,6 +34,7 @@ fun TherapySessionRouter(
                 QuestionL1_Shell(
                     sessionItem = currentItem,
                     uiSequenceNumber = currentIndex + 1,
+                    cartoonResId = helperCartoonResId, // Passed downstream cleanly
                     onNext = { currentIndex++ }
                 )
             }
@@ -41,6 +45,7 @@ fun TherapySessionRouter(
                         QuestionL3_Shell(
                             sessionItem = currentItem,
                             uiSequenceNumber = currentIndex + 1,
+                            cartoonResId = helperCartoonResId, // Passed downstream cleanly
                             onNext = { currentIndex++ }
                         )
                     }
@@ -49,6 +54,7 @@ fun TherapySessionRouter(
                         QuestionL4_Shell(
                             sessionItem = currentItem,
                             uiSequenceNumber = currentIndex + 1,
+                            cartoonResId = helperCartoonResId, // Passed downstream cleanly
                             onNext = { currentIndex++ }
                         )
                     }
@@ -57,6 +63,7 @@ fun TherapySessionRouter(
                         QuestionL2_Shell(
                             sessionItem = currentItem,
                             uiSequenceNumber = currentIndex + 1,
+                            cartoonResId = helperCartoonResId, // Passed downstream cleanly
                             onNext = { currentIndex++ }
                         )
                     }

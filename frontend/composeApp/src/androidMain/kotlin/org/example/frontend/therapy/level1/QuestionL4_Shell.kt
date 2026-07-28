@@ -61,6 +61,7 @@ private val ErrorRed = Color(0xFFFF3333)
 fun QuestionL4_Shell(
     sessionItem: SessionQuestion,
     uiSequenceNumber: Int,
+    cartoonResId: Int, // ---> INJECTED DYNAMIC GIF ID <---
     onNext: () -> Unit
 ) {
     val ip = NetworkConfig.SERVER_IP
@@ -505,10 +506,11 @@ fun QuestionL4_Shell(
                         )
                     )
                 }
+                // ---> SWAPPED STATIC REFERENCE FOR DYNAMIC HELPER STATE <---
                 AsyncImage(
-                    model = ImageRequest.Builder(context).data(R.drawable.doraemon2).build(),
+                    model = ImageRequest.Builder(context).data(cartoonResId).build(),
                     imageLoader = imageLoader,
-                    contentDescription = "Character Helper GIF",
+                    contentDescription = "Dynamic Character Helper GIF",
                     contentScale = ContentScale.FillBounds,
                     modifier = Modifier.size(327.dp).offset(y = (-120).dp).align(Alignment.BottomStart)
                 )

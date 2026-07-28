@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import coil.ImageLoader
@@ -61,6 +62,7 @@ import java.io.IOException
 fun QuestionL4_Q1_VoiceShell(
     sessionItem: SessionQuestion4,
     uiSequenceNumber: Int,
+    cartoonResId: Int, // ---> INJECTED DYNAMIC GIF ID <---
     onNext: () -> Unit
 ) {
     val context = LocalContext.current
@@ -68,6 +70,9 @@ fun QuestionL4_Q1_VoiceShell(
     val ip = NetworkConfig.SERVER_IP
 
     var currentIndex by rememberSaveable { mutableStateOf(0) }
+
+    // UI Interaction Lock prevents multiple overlapping audio network executions
+    var isSpeakerDisabled by remember { mutableStateOf(false) }
 
     // Dynamically paired word and sentence extraction for the active progression step
     val activePairsList = sessionItem.miniQuestions
@@ -86,11 +91,13 @@ fun QuestionL4_Q1_VoiceShell(
             .build()
     }
 
-    val instructionPlayer = remember {
+    // --- STABILIZED VIEWMODEL AUDIO STREAMING BLOCK ---
+    // 1. Mount the player without pre-fetching media streams
+    val instructionPlayer = remember(sessionItem.audioUrl) {
         ExoPlayer.Builder(context).build().apply {
             sessionItem.audioUrl?.let { url ->
                 setMediaItem(MediaItem.fromUri(url))
-                prepare()
+                // Notice prepare() is REMOVED here. Sockets remain closed.
             }
         }
     }
@@ -99,10 +106,27 @@ fun QuestionL4_Q1_VoiceShell(
         onDispose { instructionPlayer.release() }
     }
 
+    // 2. Open sockets and prepare streams ONLY on explicit interaction
     fun clickedSpeaker() {
+        val isPlayingOrBuffering = instructionPlayer.isPlaying ||
+                instructionPlayer.playbackState == Player.STATE_BUFFERING
+
+        if (isSpeakerDisabled || isPlayingOrBuffering) return
+
+        isSpeakerDisabled = true
         overlayBoolean.value = true
+
+        // If the player hasn't prepared the stream yet, prepare it now
+        if (instructionPlayer.playbackState == Player.STATE_IDLE) {
+            instructionPlayer.prepare()
+        }
+
         instructionPlayer.seekTo(0)
         instructionPlayer.play()
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            isSpeakerDisabled = false
+        }, 500)
     }
 
     LaunchedEffect(overlayBoolean.value) {
@@ -149,9 +173,8 @@ fun QuestionL4_Q1_VoiceShell(
                     elevation = 25.dp,
                     shape = RoundedCornerShape(38.dp),
                     ambientColor = Color(0x30FFFFFF),
-                    spotColor = Color(0x55FFB347) // Soft orange ambient glow
+                    spotColor = Color(0x55FFB347)
                 )
-                // OUTER GLASS GLOW
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(
@@ -162,7 +185,6 @@ fun QuestionL4_Q1_VoiceShell(
                     ),
                     shape = RoundedCornerShape(38.dp)
                 )
-                // GLASS BORDER
                 .border(
                     width = 1.8.dp,
                     brush = Brush.linearGradient(
@@ -174,7 +196,6 @@ fun QuestionL4_Q1_VoiceShell(
                     ),
                     shape = RoundedCornerShape(38.dp)
                 )
-                // TRANSLUCENT GLASS EFFECT (40% milky opacity base)
                 .background(
                     color = Color(0x66FFFFFF),
                     shape = RoundedCornerShape(38.dp)
@@ -197,7 +218,7 @@ fun QuestionL4_Q1_VoiceShell(
                         fontSize = 34.sp,
                         fontFamily = FontFamily(Font(R.font.windsol)),
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFF9A62), // Pastel orange accent
+                        color = Color(0xFFFF9A62),
                         textAlign = TextAlign.Center
                     ),
                     modifier = Modifier.padding(top = 18.dp)
@@ -226,12 +247,10 @@ fun QuestionL4_Q1_VoiceShell(
 
                     Spacer(modifier = Modifier.width(12.dp))
 
-                    // ===========================================
-                    // AUDIO BUTTON (UNIFORM LEVEL 4 SPEAKER ASSET)
-                    // ===========================================
-                    // Stripped outer wrapper boxes to mount the pre-colored SVG cleanly
+                    // Audio Button implementation mapping execution locks cleanly
                     IconButton(
                         onClick = { clickedSpeaker() },
+                        enabled = !isSpeakerDisabled, // Disable natively if processing
                         modifier = Modifier.size(50.dp)
                     ) {
                         Image(
@@ -270,7 +289,6 @@ fun QuestionL4_Q1_VoiceShell(
                         verticalArrangement = Arrangement.SpaceBetween,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // Renders the specific sentence paired with the active target word
                         Text(
                             text = currentPair.sentence,
                             style = TextStyle(
@@ -282,7 +300,6 @@ fun QuestionL4_Q1_VoiceShell(
                             )
                         )
 
-                        // Record Button Trigger
                         Box(
                             modifier = Modifier
                                 .size(95.dp)
@@ -308,7 +325,6 @@ fun QuestionL4_Q1_VoiceShell(
                             )
                         }
 
-                        // Submit Button Trigger
                         Box(
                             modifier = Modifier
                                 .width(165.dp)
@@ -388,22 +404,23 @@ fun QuestionL4_Q1_VoiceShell(
                     )
                     Text(
                         text = sessionItem.instructionText,
-                        // Guaranteed overflow protection via explicit padding and boundary scaling
                         modifier = Modifier.padding(horizontal = 30.dp),
                         style = TextStyle(
                             fontSize = 15.sp,
                             fontFamily = FontFamily(Font(R.font.windsol)),
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF9C4F2D), // Deep high-contrast warm orange-brown
+                            color = Color(0xFF9C4F2D),
                             textAlign = TextAlign.Center
                         )
                     )
                 }
 
                 AsyncImage(
-                    model = ImageRequest.Builder(context).data(R.drawable.doraemon).build(),
+                    model = ImageRequest.Builder(context)
+                        .data(cartoonResId) // Passes injected integer identifier cleanly
+                        .build(),
                     imageLoader = imageLoader,
-                    contentDescription = "Character Overlay",
+                    contentDescription = "Dynamic Helper Animation",
                     contentScale = ContentScale.FillBounds,
                     modifier = Modifier.size(327.dp).offset(y = (-120).dp).align(Alignment.BottomStart)
                 )

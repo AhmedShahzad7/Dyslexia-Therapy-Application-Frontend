@@ -40,8 +40,7 @@ import okhttp3.Request
 import okhttp3.Response
 import org.json.JSONObject
 import java.io.IOException
-
-
+import java.util.concurrent.TimeUnit
 
 
 private val NavBlue = Color(0xDE000278)
@@ -59,7 +58,11 @@ fun HomePage(onNavigateToProgress: () -> Unit,
     var userScores by remember { mutableStateOf<List<LevelScore>>(emptyList()) }
 
     fun fetchScoresFromFlask(userid: String, onResult: (List<LevelScore>) -> Unit) {
-        val client = OkHttpClient()
+        val client = OkHttpClient.Builder()
+            .connectTimeout(60, TimeUnit.SECONDS) // Time to establish the connection with the server
+            .readTimeout(60, TimeUnit.SECONDS)    // Time to wait for the next byte from the server
+            .writeTimeout(60, TimeUnit.SECONDS)   // Time to wait to send the next byte to the server
+            .build()
 
         val request = Request.Builder()
             .url("http://$ip/api/scores/$userid")

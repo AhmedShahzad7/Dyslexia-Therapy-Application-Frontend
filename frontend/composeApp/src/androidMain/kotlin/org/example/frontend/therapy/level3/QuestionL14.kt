@@ -44,8 +44,6 @@ import org.json.JSONObject
 
 // ─────────────────────────────────────────────────────────────────────────────
 // QUESTION L14  —  'Circle all "[target_word]"'
-// FIX: removed fixed card height (was 580.dp) and moved Next button INSIDE
-//      the Column so it never overlaps or creates a stray visible element.
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun QuestionL14(onNextScreen: () -> Unit) {
@@ -58,6 +56,9 @@ fun QuestionL14(onNextScreen: () -> Unit) {
     var dynamicAudioUrl by remember { mutableStateOf<String?>(null) }
     var isAudioPlaying  by remember { mutableStateOf(false) }
 
+    // ---> 1. INDEPENDENT LOCAL STATE FOR CARTOON GIF <---
+    var cartoonResId by remember { mutableStateOf(R.drawable.mickey1) }
+
     val overlay_boolean = remember { mutableStateOf(false) }
     val selectedIndices = remember { mutableStateOf(setOf<Int>()) }
     var gridWords       by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -65,10 +66,22 @@ fun QuestionL14(onNextScreen: () -> Unit) {
 
     val currentUser = FirebaseAuth.getInstance().currentUser
 
+    // ---> 2. LOCAL RESOURCE MAPPER <---
+    fun mapCartoonStringToDrawable(cartoon: String): Int {
+        return when (cartoon.lowercase().trim()) {
+            "mickey" -> R.drawable.mickey1
+            "pooh" -> R.drawable.pooh1
+            "tom" -> R.drawable.tom1
+            "duffy" -> R.drawable.duffy2
+            else -> R.drawable.mickey1
+        }
+    }
+
     fun setupDefaults() {
         targetWord   = "bog"
         gridWords    = listOf("bog", "dog", "bog", "log", "fog", "bog", "hog", "bog", "cog", "jog", "nog", "tog")
         questionText = "Circle the word\n shown below"
+        cartoonResId = R.drawable.mickey1
     }
 
     LaunchedEffect(Unit) {
@@ -88,6 +101,11 @@ fun QuestionL14(onNextScreen: () -> Unit) {
                         if (responseData != null) {
                             try {
                                 val json          = JSONObject(responseData)
+
+                                // ---> 3. PARSE AND MAP SELECTION LOCALLY <---
+                                val helperStr = json.optString("cartoon_selection", "mickey")
+                                cartoonResId = mapCartoonStringToDrawable(helperStr)
+
                                 val fetchedTarget = json.optString("target_word", "")
                                 dynamicAudioUrl   = if (json.isNull("audio_url")) null else json.getString("audio_url")
                                 questionText      = json.optString("instruction_text", "Circle the word\n shown below")
@@ -176,10 +194,10 @@ fun QuestionL14(onNextScreen: () -> Unit) {
             Box(
                 modifier = Modifier
                     .width(299.dp)
-                    .wrapContentHeight()            // FIX: was fixed 580.dp
+                    .wrapContentHeight()
                     .background(Color(0xC7FFFFFF), RoundedCornerShape(35.dp))
                     .align(Alignment.Center)
-                    .padding(bottom = 16.dp)        // breathing room below Next btn
+                    .padding(bottom = 16.dp)
             ) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(5.dp),
@@ -289,10 +307,7 @@ fun QuestionL14(onNextScreen: () -> Unit) {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // ── Next button — INSIDE the Column (FIX) ─────────────────
-                    // Was previously align(Alignment.BottomEnd) on the outer Box,
-                    // which caused it to overlap the last grid row and show a
-                    // stray visible element underneath.
+                    // ── Next button — INSIDE the Column ───────────────────────
                     Row(
                         modifier              = Modifier
                             .fillMaxWidth()
@@ -319,7 +334,7 @@ fun QuestionL14(onNextScreen: () -> Unit) {
                 }
             }
 
-            // ── Doraemon overlay ──────────────────────────────────────────────
+            // ── Dynamic helper overlay ────────────────────────────────────────
             if (overlay_boolean.value) {
                 Box(modifier = Modifier.fillMaxSize().background(Color(0x4FFFFFFF))) {
                     Box(
@@ -338,10 +353,14 @@ fun QuestionL14(onNextScreen: () -> Unit) {
                             )
                         )
                     }
+
+                    // ---> 4. USE LOCAL STATE IN ASYNCIMAGE <---
                     AsyncImage(
-                        model              = ImageRequest.Builder(context).data(R.drawable.doraemon).build(),
+                        model              = ImageRequest.Builder(context)
+                            .data(cartoonResId) // Passes the local state variable directly
+                            .build(),
                         imageLoader        = imageLoader,
-                        contentDescription = "Doraemon",
+                        contentDescription = "Dynamic Guidance Character Helper",
                         contentScale       = ContentScale.FillBounds,
                         modifier           = Modifier
                             .size(327.dp).offset(y = (-120).dp)

@@ -42,11 +42,9 @@ import org.example.frontend.R
 import org.json.JSONObject
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TOP-LEVEL HELPER — posts to /check_answers_therapy so the backend:
-//   • On WRONG : stores word in Level_Schema and increments Threshold_Count
-//   • On RIGHT : deletes the Level_Schema document (question mastered)
+// TOP-LEVEL HELPER — marked PRIVATE to prevent cross-file build conflicts
 // ─────────────────────────────────────────────────────────────────────────────
-fun submitTherapyAnswer(
+ fun submitTherapyAnswer(
     userID: String,
     qNum: Int,
     targetWord: String,
@@ -86,6 +84,7 @@ fun QuestionL11(onNextScreen: () -> Unit) {
     val context = LocalContext.current
 
     var isLoading by remember { mutableStateOf(true) }
+    var isSubmitting by remember { mutableStateOf(false) } // Click throttle lock
     var questionText by remember { mutableStateOf("Circle the option that\n matches with the word") }
     var dynamicAudioUrl by remember { mutableStateOf<String?>(null) }
     var isAudioPlaying by remember { mutableStateOf(false) }
@@ -94,14 +93,29 @@ fun QuestionL11(onNextScreen: () -> Unit) {
     var optionsLists by remember { mutableStateOf<List<List<String>>>(emptyList()) }
     var currentPartIndex by remember { mutableStateOf(0) }
 
+    // ---> 1. INDEPENDENT LOCAL STATE FOR CARTOON GIF <---
+    var cartoonResId by remember { mutableStateOf(R.drawable.mickey1) }
+
     val overlay_boolean = remember { mutableStateOf(false) }
     val currentUser = FirebaseAuth.getInstance().currentUser
+
+    // ---> 2. LOCAL RESOURCE MAPPER <---
+    fun mapCartoonStringToDrawable(cartoon: String): Int {
+        return when (cartoon.lowercase().trim()) {
+            "mickey" -> R.drawable.mickey1
+            "pooh" -> R.drawable.pooh1
+            "tom" -> R.drawable.tom1
+            "duffy" -> R.drawable.duffy2
+            else -> R.drawable.mickey1
+        }
+    }
 
     // Default data shown when network call fails
     fun setupDefaults() {
         if (targetWords.isEmpty()) {
             targetWords = listOf("pen")
             optionsLists = listOf(listOf("ten", "qen", "pen"))
+            cartoonResId = R.drawable.mickey1
         }
     }
 
@@ -123,6 +137,11 @@ fun QuestionL11(onNextScreen: () -> Unit) {
                         if (responseData != null) {
                             try {
                                 val json = JSONObject(responseData)
+
+                                // ---> 3. PARSE AND MAP SELECTION LOCALLY <---
+                                val helperStr = json.optString("cartoon_selection", "mickey")
+                                cartoonResId = mapCartoonStringToDrawable(helperStr)
+
                                 dynamicAudioUrl = if (json.isNull("audio_url")) null else json.getString("audio_url")
                                 val dataArray = json.optJSONArray("data")
                                 if (dataArray != null && dataArray.length() > 0) {
@@ -189,10 +208,14 @@ fun QuestionL11(onNextScreen: () -> Unit) {
 
     // ── Option tap handler ────────────────────────────────────────────────────
     fun onOptionClicked(selectedOption: String) {
+        if (isSubmitting) return // Throttle double clicks
+        isSubmitting = true
+
         val currentTarget = targetWords[currentPartIndex]
         val isCorrect = (selectedOption == currentTarget)
 
         val advance = {
+            isSubmitting = false
             if (currentPartIndex < targetWords.size - 1) currentPartIndex++
             else onNextScreen()
         }
@@ -307,14 +330,16 @@ fun QuestionL11(onNextScreen: () -> Unit) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             optionsLists[currentPartIndex].forEach { optionText ->
-                                OptionCircle(text = optionText) { onOptionClicked(optionText) }
+                                OptionCircle(text = optionText) {
+                                    if (!isSubmitting) onOptionClicked(optionText)
+                                }
                             }
                         }
                     }
                 }
             }
 
-            // Doraemon overlay
+            // Dynamic Cartoon overlay
             if (overlay_boolean.value) {
                 Box(modifier = Modifier.fillMaxSize().background(color = Color(0x4FFFFFFF))) {
                     Box(
@@ -333,10 +358,14 @@ fun QuestionL11(onNextScreen: () -> Unit) {
                             )
                         )
                     }
+
+                    // ---> 4. USE LOCAL STATE IN ASYNCIMAGE <---
                     AsyncImage(
-                        model = ImageRequest.Builder(context).data(R.drawable.doraemon).build(),
+                        model = ImageRequest.Builder(context)
+                            .data(cartoonResId) // Passes the local state variable directly
+                            .build(),
                         imageLoader = imageLoader,
-                        contentDescription = "Doraemon",
+                        contentDescription = "Dynamic Helper Companion",
                         contentScale = ContentScale.FillBounds,
                         modifier = Modifier
                             .size(327.dp).offset(y = (-120).dp)

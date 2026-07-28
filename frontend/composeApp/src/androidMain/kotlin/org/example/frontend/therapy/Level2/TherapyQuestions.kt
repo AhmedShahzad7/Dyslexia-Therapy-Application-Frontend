@@ -1,6 +1,5 @@
 package org.example.frontend.therapy.Level2
 
-
 import WaterSoundPlayer
 import android.graphics.Bitmap
 import android.media.MediaPlayer
@@ -18,15 +17,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -47,46 +38,51 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
-import kotlinx.coroutines.delay
-import org.example.frontend.R
-import coil.ImageLoader
 import com.google.firebase.auth.FirebaseAuth
-import okhttp3.Call
-import okhttp3.Callback
+import kotlinx.coroutines.delay
+import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
 import okio.IOException
-import org.example.frontend.AssesmentTest.Level4.DrawingBox
 import org.example.frontend.NetworkConfig
+import org.example.frontend.R
+import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 
-
 @Composable
-fun QuestionL2Therapy(onNextScreen: ()->Unit){
-    val ip= NetworkConfig.SERVER_IP
+fun QuestionL2Therapy(onNextScreen: () -> Unit) {
+    val ip = NetworkConfig.SERVER_IP
     val context = LocalContext.current
-    val overlay_boolean= remember { mutableStateOf(false) }
+    val overlay_boolean = remember { mutableStateOf(false) }
     val speaker_boolean = remember { mutableStateOf(false) }
     val currentUser = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
 
-
     val waterSound = remember { WaterSoundPlayer(context) }
 
+    // ---> NEW: Observable State holding your dynamic helper <---
+    var cartoonResId by remember { mutableStateOf(R.drawable.mickey1) }
+
     DisposableEffect(Unit) {
-        onDispose {
-            waterSound.release()
+        onDispose { waterSound.release() }
+    }
+
+    // ---> NEW: Type-Safe Companion Asset Mapper <---
+    fun mapCartoonStringToDrawable(cartoon: String): Int {
+        return when (cartoon.lowercase().trim()) {
+            "mickey" -> R.drawable.mickey1
+            "pooh" -> R.drawable.pooh1
+            "tom" -> R.drawable.tom1
+            "duffy" -> R.drawable.duffy2
+            else -> R.drawable.mickey1
         }
     }
 
-
+    // ---> UPDATED: Parses unified JSON Object payload cleanly <---
     fun fetchTherapyLetters(userId: String, onResult: (List<String>) -> Unit) {
         val client = OkHttpClient()
         val requestBody = MultipartBody.Builder()
@@ -95,7 +91,7 @@ fun QuestionL2Therapy(onNextScreen: ()->Unit){
             .build()
 
         val request = Request.Builder()
-            .url("http://"+ip+"/TherapyLevel2")
+            .url("http://$ip/TherapyLevel2")
             .post(requestBody)
             .build()
 
@@ -107,19 +103,23 @@ fun QuestionL2Therapy(onNextScreen: ()->Unit){
             override fun onResponse(call: Call, response: Response) {
                 response.body?.string()?.let { jsonString ->
                     try {
+                        val jsonObject = JSONObject(jsonString)
 
-                        val jsonArray = org.json.JSONArray(jsonString)
+                        // 1. Resolve Companion Choice
+                        val cartoonStr = jsonObject.optString("cartoon_selection", "mickey")
+                        val resolvedDrawable = mapCartoonStringToDrawable(cartoonStr)
 
+                        // 2. Resolve Targets Array
+                        val jsonArray = jsonObject.optJSONArray("letters") ?: org.json.JSONArray()
                         val letterList = mutableListOf<String>()
-
                         for (i in 0 until jsonArray.length()) {
                             letterList.add(jsonArray.getString(i))
                         }
 
                         Handler(Looper.getMainLooper()).post {
+                            cartoonResId = resolvedDrawable // Bind UI helper state instantly
                             onResult(letterList)
                         }
-
                     } catch (e: Exception) {
                         Log.e("TherapyAPI", "Parsing error", e)
                     }
@@ -128,7 +128,6 @@ fun QuestionL2Therapy(onNextScreen: ()->Unit){
         })
     }
 
-
     fun createBitmapFromPaths(paths: List<Path>, width: Int, height: Int): Bitmap {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bitmap)
@@ -136,16 +135,12 @@ fun QuestionL2Therapy(onNextScreen: ()->Unit){
         val paint = android.graphics.Paint().apply {
             color = android.graphics.Color.BLACK
             style = android.graphics.Paint.Style.STROKE
-            strokeWidth = 10f // Thicker lines show up better after resizing
+            strokeWidth = 10f
             isAntiAlias = true
             strokeJoin = android.graphics.Paint.Join.ROUND
             strokeCap = android.graphics.Paint.Cap.ROUND
         }
-
-        paths.forEach { composePath ->
-            canvas.drawPath(composePath.asAndroidPath(), paint)
-        }
-
+        paths.forEach { composePath -> canvas.drawPath(composePath.asAndroidPath(), paint) }
         return bitmap
     }
 
@@ -154,43 +149,32 @@ fun QuestionL2Therapy(onNextScreen: ()->Unit){
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
         return stream.toByteArray()
     }
-    val question_number="7"
-    fun sendImageToFlask(userid:String,byteArray: ByteArray,expectedLetter:String, onResult: (String) -> Unit) {
+
+    val question_number = "7"
+    fun sendImageToFlask(userid: String, byteArray: ByteArray, expectedLetter: String, onResult: (String) -> Unit) {
         val client = OkHttpClient()
         val requestBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
-            .addFormDataPart(
-                "file",
-                "image.png",
-                byteArray.toRequestBody("image/png".toMediaTypeOrNull())
-            )
-
+            .addFormDataPart("file", "image.png", byteArray.toRequestBody("image/png".toMediaTypeOrNull()))
             .addFormDataPart("user_id", userid)
             .addFormDataPart("question_number", question_number)
             .addFormDataPart("expected_Letter", expectedLetter)
             .build()
 
         val request = Request.Builder()
-            .url("http://"+ip+"/predict_therapy_level2")
+            .url("http://$ip/predict_therapy_level2")
             .post(requestBody)
             .build()
 
-        // FOR NEXT PAGE FIX CHECK FUNCTION
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Log.e("FlaskAPI", "Error! ${e.message}", e)
-                Handler(Looper.getMainLooper()).post {
-                    onResult("Error: ${e.message}")
-                }
+                Handler(Looper.getMainLooper()).post { onResult("Error: ${e.message}") }
             }
 
             override fun onResponse(call: Call, response: Response) {
                 val result = response.body?.string() ?: "No response"
-                Log.d("FlaskAPI", "Response: $result")
-                // FIX 2: Run success callback on Main Thread
-                Handler(Looper.getMainLooper()).post {
-                    onResult(result)
-                }
+                Handler(Looper.getMainLooper()).post { onResult(result) }
             }
         })
     }
@@ -198,26 +182,21 @@ fun QuestionL2Therapy(onNextScreen: ()->Unit){
     val imageLoader = remember {
         ImageLoader.Builder(context)
             .components {
-                if (SDK_INT >= 28) {
-                    add(ImageDecoderDecoder.Factory())
-                } else {
-                    add(GifDecoder.Factory())
-                }
-            }
-            .build()
+                if (SDK_INT >= 28) { add(ImageDecoderDecoder.Factory()) }
+                else { add(GifDecoder.Factory()) }
+            }.build()
     }
 
-    fun Clicked_Speaker(){
+    fun Clicked_Speaker() {
         overlay_boolean.value = true
         speaker_boolean.value = true
     }
+
     LaunchedEffect(overlay_boolean.value) {
         if (overlay_boolean.value) {
             val mediaPlayer = MediaPlayer.create(context, R.raw.above_letters)
             mediaPlayer.start()
-            mediaPlayer.setOnCompletionListener {
-                it.release()
-            }
+            mediaPlayer.setOnCompletionListener { it.release() }
             delay(5000)
             overlay_boolean.value = false
             speaker_boolean.value = false
@@ -227,11 +206,8 @@ fun QuestionL2Therapy(onNextScreen: ()->Unit){
     val letters = remember { mutableStateListOf<String>() }
     val isLoading = remember { mutableStateOf(true) }
 
-    // 2. Fetch letters on Component Load
-    // Change Unit to currentUser
     LaunchedEffect(currentUser) {
         if (currentUser.isNotEmpty()) {
-            Log.d("TherapyAPI", "UID found: $currentUser. Sending request...")
             fetchTherapyLetters(currentUser) { fetchedLetters ->
                 letters.clear()
                 if (fetchedLetters.isNotEmpty()) {
@@ -241,23 +217,18 @@ fun QuestionL2Therapy(onNextScreen: ()->Unit){
                 }
                 isLoading.value = false
             }
-        } else {
-            Log.e("TherapyAPI", "UID is still empty!")
         }
     }
 
-    val currentindexletters=remember { mutableStateOf(0) }
+    val currentindexletters = remember { mutableStateOf(0) }
     val paths = remember { mutableStateListOf<Path>() }
     var currentPath by remember { mutableStateOf<Path?>(null) }
     val density = LocalDensity.current
-    val targetPixels=64
-    val boxSizeDp =64.dp
+    val targetPixels = 64
+    val boxSizeDp = 64.dp
     val boxSizePx = with(density) { targetPixels.dp.toPx().toInt() }
 
-    Box(
-        modifier=Modifier.fillMaxSize(),
-    )
-    {
+    Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = R.drawable.therapy_level2),
             contentDescription = "",
@@ -265,60 +236,45 @@ fun QuestionL2Therapy(onNextScreen: ()->Unit){
             modifier = Modifier.fillMaxSize()
         )
 
-
         Box(
-            modifier=Modifier
+            modifier = Modifier
                 .width(299.dp)
                 .height(497.dp)
                 .background(color = Color(0xC7FFFFFF), shape = RoundedCornerShape(size = 35.dp))
                 .align(Alignment.Center)
-
-        )
-        {
+        ) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(0.dp, Alignment.CenterVertically),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Row(
-                    modifier=Modifier
-                        .fillMaxWidth().padding(top = 32.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 32.dp)
                         .height(62.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
-
-                )
-                {
+                ) {
                     Text(
                         text = "Therapy Level 2",
-                        Modifier
-                            .width(245.dp)
-                            .height(62.dp),
+                        modifier = Modifier.width(245.dp).height(62.dp),
                         style = TextStyle(
                             fontSize = 34.sp,
                             fontFamily = FontFamily(Font(R.font.windsol)),
                             fontWeight = FontWeight(400),
                             color = Color(0xFF077BB6),
                             textAlign = TextAlign.Center,
-
-                            )
+                        )
                     )
                 }
                 Row(
-                    modifier=Modifier
+                    modifier = Modifier
                         .fillMaxWidth()
                         .height(100.dp)
                         .background(color = Color(0x00FFFFFF))
                         .padding(start = 20.dp)
-
-                )
-                {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    )
-                    {
-
-
-
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "Write the above letter\n in the space given below",
                             style = TextStyle(
@@ -329,20 +285,12 @@ fun QuestionL2Therapy(onNextScreen: ()->Unit){
                                 textAlign = TextAlign.Center,
                             )
                         )
-                        Box(
-                            modifier = Modifier.align(Alignment.CenterVertically)
-                        ) {
-                            IconButton(
-                                onClick = {
-                                    Clicked_Speaker()
-                                }
-                            ) {
+                        Box(modifier = Modifier.align(Alignment.CenterVertically)) {
+                            IconButton(onClick = { Clicked_Speaker() }) {
                                 Image(
-                                    modifier = Modifier
-                                        .width(35.dp)
-                                        .height(35.dp),
+                                    modifier = Modifier.width(35.dp).height(35.dp),
                                     painter = painterResource(id = R.drawable.soundbutton_therapy_level2),
-                                    contentDescription = "selected checkmark",
+                                    contentDescription = "Speaker sound trigger",
                                     contentScale = ContentScale.None
                                 )
                             }
@@ -350,70 +298,62 @@ fun QuestionL2Therapy(onNextScreen: ()->Unit){
                     }
                 }
                 Box(
-                    Modifier
+                    modifier = Modifier
                         .shadow(elevation = 25.dp, spotColor = Color(0x40000000), ambientColor = Color(0x40000000))
                         .width(250.dp)
                         .height(450.dp)
                         .background(color = Color(0xE5FFFFFF), shape = RoundedCornerShape(size = 35.dp))
-                        .padding(start = 10.dp, top = 10.dp, end = 10.dp, bottom = 10.dp)
-                )
-                {
+                        .padding(10.dp)
+                ) {
                     Column(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.SpaceBetween,
                         horizontalAlignment = Alignment.CenterHorizontally
-                    )
-                    {
+                    ) {
                         if (isLoading.value) {
                             Text(
                                 text = "Loading...",
                                 style = TextStyle(fontSize = 30.sp, color = Color.Gray)
                             )
+                        } else if (letters.isNotEmpty()) {
+                            Text(
+                                text = letters[currentindexletters.value],
+                                style = TextStyle(
+                                    fontSize = 50.sp,
+                                    fontFamily = FontFamily(Font(R.font.windsol)),
+                                    fontWeight = FontWeight(400),
+                                    color = Color(0xFF077BB6),
+                                    textAlign = TextAlign.Center,
+                                )
+                            )
+                        } else {
+                            Text(
+                                text = "No Letters!",
+                                style = TextStyle(fontSize = 25.sp, color = Color.Red)
+                            )
                         }
-                            else if (letters.isNotEmpty()) {
-                                Text(
-                                    text = letters[currentindexletters.value],
-                                    style = TextStyle(
-                                        fontSize = 50.sp,
-                                        fontFamily = FontFamily(Font(R.font.windsol)),
-                                        fontWeight = FontWeight(400),
-                                        color = Color(0xFF077BB6),
-                                        textAlign = TextAlign.Center,
-                                    )
-
-                                )
-                            }
-                            else {
-                                Text(
-                                    text = "No Letters!",
-                                    style = TextStyle(fontSize = 25.sp, color = Color.Red)
-                                )
-                            }
 
                         Column(
-                            modifier = Modifier.width(boxSizeDp )
+                            modifier = Modifier
+                                .width(boxSizeDp)
                                 .wrapContentHeight()
                                 .border(width = 2.dp, color = Color.Gray, shape = RoundedCornerShape(8.dp)),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+                            verticalArrangement = Arrangement.Center
                         ) {
-
-
                             Box(
                                 modifier = Modifier
-                                    .size(boxSizeDp) // Use the variable
+                                    .size(boxSizeDp)
                                     .background(color = Color.White)
                                     .clipToBounds()
                                     .pointerInput(Unit) {
                                         detectDragGestures(
                                             onDragStart = { offset ->
                                                 waterSound.start()
-                                                val newPath = Path().apply { moveTo(offset.x, offset.y) }
-                                                currentPath = newPath
+                                                currentPath = Path().apply { moveTo(offset.x, offset.y) }
                                             },
                                             onDrag = { change, _ ->
                                                 currentPath?.lineTo(change.position.x, change.position.y)
-                                                // Trigger recomposition (hacky but works for Path updates)
                                                 currentPath = Path().apply {
                                                     currentPath?.let { addPath(it) }
                                                 }
@@ -423,15 +363,11 @@ fun QuestionL2Therapy(onNextScreen: ()->Unit){
                                                 currentPath?.let { paths.add(it) }
                                                 currentPath = null
                                             },
-                                            onDragCancel = {
-                                                waterSound.stop()
-                                            }
+                                            onDragCancel = { waterSound.stop() }
                                         )
                                     }
                             ) {
                                 Canvas(modifier = Modifier.fillMaxSize()) {
-//
-
                                     paths.forEach { path ->
                                         drawPath(path = path, color = Color.Black, style = Stroke(8f))
                                     }
@@ -442,9 +378,8 @@ fun QuestionL2Therapy(onNextScreen: ()->Unit){
                             }
                         }
 
-
                         Box(
-                            Modifier
+                            modifier = Modifier
                                 .padding(bottom = 16.dp)
                                 .width(150.dp)
                                 .height(50.dp)
@@ -452,30 +387,23 @@ fun QuestionL2Therapy(onNextScreen: ()->Unit){
                                 .clickable {
                                     val bitmap = createBitmapFromPaths(paths, boxSizePx, boxSizePx)
                                     val bytes = bitmapToByteArray(bitmap)
-                                    val currentUser = FirebaseAuth.getInstance().currentUser?.uid ?: ""
-                                    sendImageToFlask(currentUser, bytes,expectedLetter=letters[currentindexletters.value]) { result ->
+                                    val uid = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+
+                                    sendImageToFlask(uid, bytes, expectedLetter = letters[currentindexletters.value]) { result ->
                                         println("Prediction: $result")
                                     }
+
                                     paths.clear()
                                     currentPath = null
 
-
-                                    if (currentindexletters.value<letters.lastIndex)
-                                    {
+                                    if (currentindexletters.value < letters.lastIndex) {
                                         currentindexletters.value++
-                                    }
-                                    else
-                                    {
+                                    } else {
                                         onNextScreen()
                                     }
-
                                 },
                             contentAlignment = Alignment.Center
-
-
-
-                        )
-                        {
+                        ) {
                             Text(
                                 text = "Submit",
                                 style = TextStyle(
@@ -483,45 +411,31 @@ fun QuestionL2Therapy(onNextScreen: ()->Unit){
                                     fontFamily = FontFamily(Font(R.font.windsol)),
                                     fontWeight = FontWeight(400),
                                     color = Color(0xFFFFFFFF),
-
-                                    ),
-
-
                                 )
+                            )
                         }
                     }
                 }
             }
+        } // Ending Original Screen
 
-        } //Ending Original Screen
-
-        //Character reading question
-        if(overlay_boolean.value) {
-
+        // Character reading overlay screen
+        if (overlay_boolean.value) {
             Box(
                 modifier = Modifier
-                    .offset(x = 0.dp, y = 0.dp)
-                    .width(430.dp)
-                    .height(932.dp)
-                    .background(color = Color(0x4FFFFFFF))
                     .fillMaxSize()
-
+                    .background(color = Color(0x4FFFFFFF))
             ) {
-                //Speech Bubble Location
-
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(color = Color(0x4FFFFFFF))
-
                 ) {
-                    // --- SPEECH BUBBLE (Center Right) ---
-
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
-                            .offset(y = -120.dp)
+                            .offset(y = (-120).dp)
                     ) {
                         Image(
                             painter = painterResource(R.drawable.speechbubble_therapy_level2),
@@ -538,27 +452,23 @@ fun QuestionL2Therapy(onNextScreen: ()->Unit){
                             )
                         )
                     }
-                    // --- DORAEMON (Bottom Left) ---
 
+                    // ---> SWAPPED HARDCODED GIF FOR RESOLVED DYNAMIC HELPER STATE <---
                     AsyncImage(
                         model = ImageRequest.Builder(context)
-                            .data(R.drawable.doraemon2)
+                            .data(cartoonResId) // Dynamic state reference cleanly injected
                             .build(),
                         imageLoader = imageLoader,
-                        contentDescription = "Doraemon GIF",
+                        contentDescription = "Dynamic Companion Helper GIF",
                         contentScale = ContentScale.FillBounds,
                         modifier = Modifier
                             .width(327.dp)
                             .height(327.dp)
-                            .offset(y = -120.dp)
+                            .offset(y = (-120).dp)
                             .align(Alignment.BottomStart)
                     )
                 }
-
             }
         }
-
     }
 }
-
-

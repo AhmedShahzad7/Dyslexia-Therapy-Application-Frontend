@@ -56,9 +56,10 @@ import java.io.ByteArrayOutputStream
 
 @Composable
 fun QuestionL1_Shell(
-    sessionItem: SessionQuestion, // DIRECT INJECTION: Holds the mined mini-questions payload received from the Router
-    uiSequenceNumber: Int,        // Dynamic visual sequence numbering derived from array progression (1, 2, 3...)
-    onNext: () -> Unit            // Triggers the Router to advance the array pointer and mount the next screen
+    sessionItem: SessionQuestion,
+    uiSequenceNumber: Int,
+    cartoonResId: Int,            // ---> INJECTED DYNAMIC GIF ID <---
+    onNext: () -> Unit
 ) {
     val context = LocalContext.current
     val waterSound = remember { WaterSoundPlayer(context) }
@@ -441,7 +442,7 @@ fun QuestionL1_Shell(
             }
         }
 
-        // ---> UNTOUCHED OVERLAY: Preserved your exact original character logic with guaranteed text containment <---
+        // ---> UPDATED OVERLAY BLOCK <---
         if (overlayBoolean.value) {
             Box(
                 modifier = Modifier
@@ -465,12 +466,19 @@ fun QuestionL1_Shell(
                         )
                     )
                 }
+
+                // ---> SWAPPED STATIC DORAEMON FOR DYNAMIC ASSET <---
                 AsyncImage(
-                    model = ImageRequest.Builder(context).data(R.drawable.doraemon).build(),
+                    model = ImageRequest.Builder(context)
+                        .data(cartoonResId) // Uses the injected integer resource ID cleanly
+                        .build(),
                     imageLoader = imageLoader,
-                    contentDescription = "Doraemon GIF",
+                    contentDescription = "Dynamic Helper GIF",
                     contentScale = ContentScale.FillBounds,
-                    modifier = Modifier.size(327.dp).offset(y = (-120).dp).align(Alignment.BottomStart)
+                    modifier = Modifier
+                        .size(327.dp)
+                        .offset(y = (-120).dp)
+                        .align(Alignment.BottomStart)
                 )
             }
         }

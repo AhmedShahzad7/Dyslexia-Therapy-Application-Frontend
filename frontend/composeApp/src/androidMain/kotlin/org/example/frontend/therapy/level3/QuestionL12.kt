@@ -63,11 +63,6 @@ data class CardItem(val id: Int, val word: String)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // QUESTION L12  —  "Read the following words out loud"
-//
-// FIX: audio now posts to /transcribe_and_score_therapy (not /transcribe_and_score).
-//   /transcribe_and_score_therapy calls process_therapy_submission which:
-//   • Wrong  → stores error in Level_Schema + increments Threshold_Count
-//   • Correct→ deletes Level_Schema document (word mastered)
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun QuestionL12(onNextScreen: () -> Unit) {
@@ -80,10 +75,24 @@ fun QuestionL12(onNextScreen: () -> Unit) {
     var dynamicAudioUrl by remember { mutableStateOf<String?>(null) }
     var isAudioPlaying by remember { mutableStateOf(false) }
 
+    // ---> 1. INDEPENDENT LOCAL STATE FOR CARTOON GIF <---
+    var cartoonResId by remember { mutableStateOf(R.drawable.mickey1) }
+
     val overlay_boolean = remember { mutableStateOf(false) }
     val play_boolean = remember { mutableStateOf(false) }
     val cards = remember { mutableStateListOf<CardItem>() }
     val currentUser = FirebaseAuth.getInstance().currentUser
+
+    // ---> 2. LOCAL RESOURCE MAPPER <---
+    fun mapCartoonStringToDrawable(cartoon: String): Int {
+        return when (cartoon.lowercase().trim()) {
+            "mickey" -> R.drawable.mickey1
+            "pooh" -> R.drawable.pooh1
+            "tom" -> R.drawable.tom1
+            "duffy" -> R.drawable.duffy2
+            else -> R.drawable.mickey1
+        }
+    }
 
     fun setupDefaults() {
         if (cards.isEmpty()) {
@@ -92,11 +101,11 @@ fun QuestionL12(onNextScreen: () -> Unit) {
                 CardItem(2, "dib"),
                 CardItem(3, "deb")
             ))
+            cartoonResId = R.drawable.mickey1
         }
     }
 
     // ── Fetch personalised words from backend ─────────────────────────────────
-    //  Backend checks Level_Schema → Assessment_Test → CSV lookup_therapy_words()
     LaunchedEffect(Unit) {
         currentUser?.uid?.let { uid ->
             val client = OkHttpClient()
@@ -114,6 +123,11 @@ fun QuestionL12(onNextScreen: () -> Unit) {
                         if (responseData != null) {
                             try {
                                 val json = JSONObject(responseData)
+
+                                // ---> 3. PARSE AND MAP SELECTION LOCALLY <---
+                                val helperStr = json.optString("cartoon_selection", "mickey")
+                                cartoonResId = mapCartoonStringToDrawable(helperStr)
+
                                 dynamicAudioUrl = if (json.isNull("audio_url")) null else json.getString("audio_url")
                                 val dataArray = json.optJSONArray("data")
                                 if (dataArray != null && dataArray.length() > 0) {
@@ -191,7 +205,7 @@ fun QuestionL12(onNextScreen: () -> Unit) {
         if (isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.align(Alignment.Center),
-                color = Color(0xFFF8335D )
+                color = Color(0xFFF8335D)
             )
         } else {
             Box(
@@ -347,7 +361,6 @@ fun QuestionL12(onNextScreen: () -> Unit) {
                                                                 userId = userId,
                                                                 questionNumber = CURRENT_QUESTION_NUMBER
                                                             ) { _ ->
-                                                                // Threshold check happens on backend, frontend proceeds on response
                                                                 isProcessing = false
                                                                 autoDismissTop = true
                                                             }
@@ -394,10 +407,14 @@ fun QuestionL12(onNextScreen: () -> Unit) {
                             )
                         )
                     }
+
+                    // ---> 4. USE LOCAL STATE IN ASYNCIMAGE <---
                     AsyncImage(
-                        model = ImageRequest.Builder(context).data(R.drawable.doraemon2).build(),
+                        model = ImageRequest.Builder(context)
+                            .data(cartoonResId) // Passes the local state variable directly
+                            .build(),
                         imageLoader = imageLoader,
-                        contentDescription = "Doraemon",
+                        contentDescription = "Dynamic Guidance Character Helper",
                         contentScale = ContentScale.FillBounds,
                         modifier = Modifier
                             .size(327.dp).offset(y = (-120).dp)
@@ -411,9 +428,6 @@ fun QuestionL12(onNextScreen: () -> Unit) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Uploads audio to /transcribe_and_score_therapy  (THERAPY endpoint)
-// The backend transcribes, scores, then calls process_therapy_submission:
-//   • Wrong  → Level_Schema error stored + Threshold_Count++
-//   • Correct→ Level_Schema document deleted
 // ─────────────────────────────────────────────────────────────────────────────
 fun uploadAudioForTherapy(
     audioFile: File,
@@ -434,7 +448,6 @@ fun uploadAudioForTherapy(
             .build()
 
         val baseUrl = if (serverIp.startsWith("http")) serverIp else "http://$serverIp"
-        // ── Therapy endpoint (not the assessment /transcribe_and_score) ──────────
         val request = Request.Builder()
             .url("$baseUrl/transcribe_and_score_therapy")
             .post(requestBody)

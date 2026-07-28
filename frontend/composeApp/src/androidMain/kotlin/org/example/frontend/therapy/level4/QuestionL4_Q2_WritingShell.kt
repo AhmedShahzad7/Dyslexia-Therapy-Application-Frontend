@@ -78,6 +78,7 @@ fun createBitmapFromPaths(paths: List<Path>, size: Int): Bitmap {
 fun QuestionL4_Q2_WritingShell(
     sessionItem: SessionQuestion4,
     uiSequenceNumber: Int,
+    cartoonResId: Int, // ---> INJECTED DYNAMIC GIF ID <---
     onNext: () -> Unit
 ) {
     val context = LocalContext.current
@@ -142,7 +143,7 @@ fun QuestionL4_Q2_WritingShell(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // ---> THEMATIC BACKGROUND: Mapped to the specified level4_q1 composition <---
+        // ---> THEMATIC BACKGROUND: Mapped to the specified level4_q2 composition <---
         Image(
             painter = painterResource(id = R.drawable.level4_q2),
             contentDescription = "Thematic Background",
@@ -453,10 +454,13 @@ fun QuestionL4_Q2_WritingShell(
                     )
                 }
 
+                // ---> SWAPPED STATIC ASSET REFERENCE FOR RESOLVED INTEGER TARGET <---
                 AsyncImage(
-                    model = ImageRequest.Builder(context).data(R.drawable.doraemon).build(),
+                    model = ImageRequest.Builder(context)
+                        .data(cartoonResId) // Passes injected integer state payload directly
+                        .build(),
                     imageLoader = imageLoader,
-                    contentDescription = "Character Overlay",
+                    contentDescription = "Dynamic Companion Guidance Overlay",
                     modifier = Modifier.size(327.dp).offset(y = (-120).dp).align(Alignment.BottomStart)
                 )
             }

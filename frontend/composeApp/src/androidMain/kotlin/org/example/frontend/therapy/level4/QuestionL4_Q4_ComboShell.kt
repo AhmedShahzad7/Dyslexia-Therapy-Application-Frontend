@@ -88,6 +88,7 @@ fun createBitmapFromPathsQ4(paths: List<Path>, size: Int): Bitmap {
 fun QuestionL4_Q4_ComboShell(
     sessionItem: SessionQuestion4,
     uiSequenceNumber: Int,
+    cartoonResId: Int, // ---> INJECTED DYNAMIC GIF ID <---
     onNext: () -> Unit
 ) {
     val context = LocalContext.current
@@ -552,10 +553,14 @@ fun QuestionL4_Q4_ComboShell(
                         )
                     )
                 }
+
+                // ---> SWAPPED HARDCODED IMAGE REFERENCE FOR DYNAMIC HELPER STATE <---
                 AsyncImage(
-                    model = ImageRequest.Builder(context).data(R.drawable.doraemon).build(),
+                    model = ImageRequest.Builder(context)
+                        .data(cartoonResId) // Passes injected integer state payload directly
+                        .build(),
                     imageLoader = imageLoader,
-                    contentDescription = "Character Overlay",
+                    contentDescription = "Dynamic Companion Guidance Overlay Helper",
                     contentScale = ContentScale.FillBounds,
                     modifier = Modifier.size(327.dp).offset(y = (-120).dp).align(Alignment.BottomStart)
                 )
