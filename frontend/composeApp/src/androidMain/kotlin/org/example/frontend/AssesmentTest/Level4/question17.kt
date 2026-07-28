@@ -50,7 +50,6 @@ import org.example.frontend.NetworkConfig
 import org.example.frontend.R
 import java.io.ByteArrayOutputStream
 
-// --- HELPER FUNCTIONS ---
 fun createBitmapFromPaths(paths: List<Path>, size: Int): Bitmap {
     val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
     val canvas = android.graphics.Canvas(bitmap)
@@ -82,7 +81,6 @@ fun sendSentenceToFlask(userID: String, sentence: String, images: List<ByteArray
         )
     }
 
-    // Hardcoded URL as requested
     val request = Request.Builder()
         .url("http://"+ip+"/predict_handwriting_sentence")
         .post(multipartBuilder.build())

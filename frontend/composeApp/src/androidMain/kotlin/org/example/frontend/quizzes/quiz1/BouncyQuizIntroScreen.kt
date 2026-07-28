@@ -34,25 +34,21 @@ val BabyGemoyFont = FontFamily(Font(R.font.baby_gemoy))
 @Composable
 fun BouncyQuizIntroScreen(
     viewModel: Quiz1ViewModel,
-    onIntroFinished: () -> Unit // Transitions to Question 1 shell
+    onIntroFinished: () -> Unit
 ) {
     val context = LocalContext.current
 
-    // 1. Trigger the Quiz Session payload generation/fetch
     LaunchedEffect(Unit) {
         viewModel.initQuizSession()
     }
 
-    // Timer state ensuring the user enjoys the complete space video intro
     var animationFinished by remember { mutableStateOf(false) }
 
-    // Hold the screen for 3.5 seconds before evaluating routing conditions
     LaunchedEffect(Unit) {
         delay(3500L)
         animationFinished = true
     }
 
-    // 2. Navigation Coordinator: Requires both animation completion and loaded data
     LaunchedEffect(animationFinished, viewModel.isLoading.value) {
         if (animationFinished && !viewModel.isLoading.value) {
             if (viewModel.quizQuestions.isNotEmpty()) {
@@ -61,7 +57,6 @@ fun BouncyQuizIntroScreen(
         }
     }
 
-    // Initialize ExoPlayer with your custom space video background
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
             val videoUri = Uri.parse("android.resource://${context.packageName}/${R.raw.quiz1_intro}")
@@ -80,7 +75,6 @@ fun BouncyQuizIntroScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // --- BOTTOM LAYER: Background Video ---
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
@@ -92,26 +86,23 @@ fun BouncyQuizIntroScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        // --- MIDDLE LAYER: Bouncy Text ---
         BouncyQuizTextOverlay()
 
-        // --- TOP LAYER: Network/Generation Loading Fallback ---
         if (animationFinished && viewModel.isLoading.value) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0x66000000)), // Subtle dark dimming overlay
+                    .background(Color(0x66000000)),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = Color(0xFF00E5FF)) // Themed cyan color
+                    CircularProgressIndicator(color = Color(0xFF00E5FF))
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Generating spatial test sequence...", color = Color.White)
                 }
             }
         }
 
-        // Backend Error Handling display
         viewModel.errorMessage.value?.let { error ->
             if (animationFinished) {
                 Box(

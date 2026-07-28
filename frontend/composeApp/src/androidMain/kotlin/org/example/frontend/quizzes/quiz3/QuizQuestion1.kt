@@ -41,17 +41,10 @@ import org.example.frontend.NetworkConfig
 import org.example.frontend.R
 import org.json.JSONObject
 
-// ─────────────────────────────────────────────────────────────────────────────
-// QUIZ QUESTION 1  —  "Circle the option that matches the word"  (MCQ)
-//
-// FIX: The backend /get_personalized_question_quiz3 routes on "1"/"2"/"3",
-//      not on "11". We now fetch with question_number=1 and submit with
-//      question_number=1 so Firestore tracks Q1 correctly for the 75% flag.
-// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 fun QuizQuestion1(onNextScreen: () -> Unit) {
 
-    // "1" → backend MCQ branch; stored as 1 in Firestore
     val FETCH_Q_NUM  = "1"
     val SUBMIT_Q_NUM = 1
 
@@ -76,7 +69,6 @@ fun QuizQuestion1(onNextScreen: () -> Unit) {
         }
     }
 
-    // ── Fetch ─────────────────────────────────────────────────────────────────
     LaunchedEffect(Unit) {
         currentUser?.uid?.let { uid ->
             val client  = OkHttpClient()
@@ -128,7 +120,6 @@ fun QuizQuestion1(onNextScreen: () -> Unit) {
         }.build()
     }
 
-    // ── Doraemon / audio overlay ──────────────────────────────────────────────
     LaunchedEffect(overlayBoolean.value) {
         if (overlayBoolean.value && !dynamicAudioUrl.isNullOrEmpty()) {
             isAudioPlaying = true
@@ -155,7 +146,6 @@ fun QuizQuestion1(onNextScreen: () -> Unit) {
         }
     }
 
-    // ── Option tap → submit then advance ─────────────────────────────────────
     fun onOptionClicked(selected: String) {
         val target    = targetWords[currentPartIndex]
         val isCorrect = (selected == target)
@@ -168,7 +158,6 @@ fun QuizQuestion1(onNextScreen: () -> Unit) {
         } ?: advance()
     }
 
-    // ── UI ────────────────────────────────────────────────────────────────────
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter            = painterResource(R.drawable.therapy_level3),
@@ -306,9 +295,7 @@ fun QuizQuestion1(onNextScreen: () -> Unit) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Shared option circle — plain (no selection state)
-// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 internal fun QuizOptionCircle(text: String, onOptionClick: () -> Unit) {
     Column(
@@ -335,10 +322,7 @@ internal fun QuizOptionCircle(text: String, onOptionClick: () -> Unit) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Shared submit helper — used by QuizQuestion1, QuizQuestion2, QuizQuestion3
-// Posts to /submit_quiz_answer which updates the 75% flag in Firestore.
-// ─────────────────────────────────────────────────────────────────────────────
+
 fun submitTherapyAnswer(
     uid: String,
     qNum: Int,

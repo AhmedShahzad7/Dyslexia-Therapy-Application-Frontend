@@ -199,17 +199,16 @@ fun Question10(onNextScreen:()->Unit){
                         modifier = Modifier.fillMaxWidth().padding(8.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
-                        maxItemsInEachRow = 4 // Words are wider, so fewer per row
+                        maxItemsInEachRow = 4
                     ) {
                         val currentUser = FirebaseAuth.getInstance().currentUser?.uid ?: ""
                         wordsListreversed.forEachIndexed { index, word ->
                             key("word_$index") {
-                                // Updated to call your wordboxes function
                                 wordboxesReversed(
                                     word = word,
                                     userid = currentUser,
                                     modifier = Modifier
-                                        .width(75.dp) // Adjusted width to fit better
+                                        .width(75.dp)
                                         .height(50.dp)
                                 )
                             }
@@ -218,8 +217,8 @@ fun Question10(onNextScreen:()->Unit){
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp) // optional padding
-                            .height(50.dp) // enough space for the button
+                            .padding(16.dp)
+                            .height(50.dp)
                     ) {
                         Button(
                             onClick = { onNextScreen() },
@@ -227,8 +226,8 @@ fun Question10(onNextScreen:()->Unit){
                                 .align(Alignment.BottomEnd)
                                 .height(50.dp)
                                 .width(120.dp),
-                            shape = RoundedCornerShape(25.dp), // rounded button
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xF527B51A)) // green
+                            shape = RoundedCornerShape(25.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xF527B51A))
                         ) {
                             Text(
                                 text = "Next",
@@ -269,7 +268,6 @@ fun Question10(onNextScreen:()->Unit){
                         .background(color = Color(0x4FFFFFFF))
 
                 ) {
-                    // --- SPEECH BUBBLE (Center Right) ---
 
                     Box(
                         contentAlignment = Alignment.Center,
@@ -292,7 +290,6 @@ fun Question10(onNextScreen:()->Unit){
                             )
                         )
                     }
-                    // --- DORAEMON (Bottom Left) ---
 
                     AsyncImage(
                         model = ImageRequest.Builder(context)
@@ -397,10 +394,9 @@ fun wordboxesReversed(word: String, userid: String, modifier: Modifier = Modifie
                 shape = RoundedCornerShape(8.dp)
             )
             .background(color = Color.White, shape = RoundedCornerShape(8.dp))
-            .clickable(enabled = !isProcessing) { // Prevent double clicks
+            .clickable(enabled = !isProcessing) {
                 isProcessing = true
                 sendLetterToFlask(userid, word) { response ->
-                    // Logic to parse the response
                     borderColor = if (response.trim()=="correct") {
                         Color(0xFF27B51A) // Green
 

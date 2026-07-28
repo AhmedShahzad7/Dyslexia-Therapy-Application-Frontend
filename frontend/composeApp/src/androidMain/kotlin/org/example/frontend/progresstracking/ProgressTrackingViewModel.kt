@@ -34,11 +34,9 @@ class ProgressTrackingViewModel(application: Application) : AndroidViewModel(app
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
 
-            // Grab local screen time safely
             val stFloat = screenTimeTracker.getProgressFloat()
             val stText = screenTimeTracker.getFormattedTime()
 
-            // Fetch network metrics off the main thread using dynamic NetworkConfig mappings
             val networkResult = withContext(Dispatchers.IO) {
                 fetchBackendStats(userId)
             }
@@ -55,7 +53,6 @@ class ProgressTrackingViewModel(application: Application) : AndroidViewModel(app
                     screenTimeText = stText
                 )
             } else {
-                // Fallback state preserves local UI metrics on timeout
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     screenTimeFloat = stFloat,
@@ -67,7 +64,6 @@ class ProgressTrackingViewModel(application: Application) : AndroidViewModel(app
 
     private fun fetchBackendStats(userId: String): JSONObject? {
         return try {
-            // Dynamically constructs destination URL utilizing NetworkConfig variables
             val ip = NetworkConfig.SERVER_IP
             val targetUrl = URL("http://$ip/api/user_progress/$userId")
 

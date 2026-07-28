@@ -93,7 +93,7 @@ fun Question7(onNextScreen: ()->Unit){
         val paint = android.graphics.Paint().apply {
             color = android.graphics.Color.BLACK
             style = android.graphics.Paint.Style.STROKE
-            strokeWidth = 10f // Thicker lines show up better after resizing
+            strokeWidth = 10f
             isAntiAlias = true
             strokeJoin = android.graphics.Paint.Join.ROUND
             strokeCap = android.graphics.Paint.Cap.ROUND
@@ -144,7 +144,6 @@ fun Question7(onNextScreen: ()->Unit){
             override fun onResponse(call: Call, response: Response) {
                 val result = response.body?.string() ?: "No response"
                 Log.d("FlaskAPI", "Response: $result")
-                // FIX 2: Run success callback on Main Thread
                 Handler(Looper.getMainLooper()).post {
                     onResult(result)
                 }
@@ -327,7 +326,7 @@ fun Question7(onNextScreen: ()->Unit){
 
                             Box(
                                 modifier = Modifier
-                                    .size(boxSizeDp) // Use the variable
+                                    .size(boxSizeDp)
                                     .background(color = Color.White)
                                     .clipToBounds()
                                     .pointerInput(Unit) {
@@ -339,7 +338,6 @@ fun Question7(onNextScreen: ()->Unit){
                                             },
                                             onDrag = { change, _ ->
                                                 currentPath?.lineTo(change.position.x, change.position.y)
-                                                // Trigger recomposition (hacky but works for Path updates)
                                                 currentPath = Path().apply {
                                                     currentPath?.let { addPath(it) }
                                                 }
@@ -441,7 +439,6 @@ fun Question7(onNextScreen: ()->Unit){
                         .background(color = Color(0x4FFFFFFF))
 
                 ) {
-                    // --- SPEECH BUBBLE (Center Right) ---
 
                     Box(
                         contentAlignment = Alignment.Center,
@@ -464,7 +461,6 @@ fun Question7(onNextScreen: ()->Unit){
                             )
                         )
                     }
-                    // --- DORAEMON (Bottom Left) ---
 
                     AsyncImage(
                         model = ImageRequest.Builder(context)

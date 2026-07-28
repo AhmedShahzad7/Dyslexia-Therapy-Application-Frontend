@@ -17,10 +17,8 @@ import org.example.frontend.NetworkConfig
 fun DebugMenu(onDismiss: () -> Unit) {
     val context = LocalContext.current
 
-    // State to hold the text in the input field, initialized with the current IP
     var ipInput by remember { mutableStateOf(NetworkConfig.SERVER_IP) }
 
-    // A simple dialog (popup)
     AlertDialog(
         onDismissRequest = { onDismiss() },
         title = { Text("Debug Settings") },

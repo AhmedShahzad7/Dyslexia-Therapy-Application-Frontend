@@ -58,7 +58,6 @@ fun QuizQuestionL2_Shell(
     var isAudioPlaying by remember { mutableStateOf(false) }
     var isVerifying by remember { mutableStateOf(false) }
 
-    // Shuffled grid pool mapping distinct directional selections
     val randomizedDirections = remember(questionData) {
         listOf("Up", "Down", "Left", "Right", "NE", "NW", "SE", "SW").shuffled()
     }
@@ -86,7 +85,6 @@ fun QuizQuestionL2_Shell(
             }.build()
     }
 
-    // Dynamic Text-to-Speech execution loop
     LaunchedEffect(overlayBoolean.value) {
         if (overlayBoolean.value && questionData.audioUrl != null) {
             isAudioPlaying = true
@@ -126,7 +124,6 @@ fun QuizQuestionL2_Shell(
 
     // MAIN VIEWPLANE
     Box(modifier = Modifier.fillMaxSize()) {
-        // --- LAYER 1: Deep Cosmic Testing Environment Base ---
         Image(
             painter = painterResource(R.drawable.quiz1_q2),
             contentDescription = "Cosmic Testing Background",
@@ -134,7 +131,6 @@ fun QuizQuestionL2_Shell(
             modifier = Modifier.fillMaxSize()
         )
 
-        // --- LAYER 2: Absolute Overhead Liquid Meter ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -148,7 +144,6 @@ fun QuizQuestionL2_Shell(
             )
         }
 
-        // --- LAYER 3: Polished "White Glass" Space Container ---
         Box(
             modifier = Modifier
                 .width(330.dp)
@@ -159,7 +154,6 @@ fun QuizQuestionL2_Shell(
                     ambientColor = Color(0x3300E5FF),
                     spotColor = Color(0x4400E5FF)
                 )
-                // Whiter, highly opaque glass gradient matching Question 1 parity
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(
@@ -170,7 +164,6 @@ fun QuizQuestionL2_Shell(
                     ),
                     shape = RoundedCornerShape(38.dp)
                 )
-                // Cyan-tinted white highlight border
                 .border(
                     width = 1.5.dp,
                     brush = Brush.linearGradient(
@@ -263,7 +256,6 @@ fun QuizQuestionL2_Shell(
                                         val itemIndex = rowIndex * 3 + colIndex
                                         val isSelected = selectedIndex == itemIndex
 
-                                        // Cosmic Space Highlights: Replaces green indicators with luminous cyan accents
                                         val borderColor = if (isSelected) Color(0xFF00E5FF) else Color(0x4400E5FF)
                                         val cardBackground = if (isSelected) Color(0x3300E5FF) else Color(0x66FFFFFF)
 
@@ -292,10 +284,8 @@ fun QuizQuestionL2_Shell(
                                                         selectedIndex = itemIndex
                                                         isVerifying = true
                                                         scope.launch {
-                                                            // Short stabilization delay mapping selection feedback safely
                                                             delay(500)
 
-                                                            // Encodes selection string to standard UTF-8 byte payload
                                                             val answerPayload = direction.toByteArray()
                                                             onAnswerSubmitted(answerPayload)
                                                         }
@@ -320,7 +310,6 @@ fun QuizQuestionL2_Shell(
             }
         }
 
-        // --- LAYER 4: Speech Companion Frame ---
         if (overlayBoolean.value) {
             Box(
                 modifier = Modifier

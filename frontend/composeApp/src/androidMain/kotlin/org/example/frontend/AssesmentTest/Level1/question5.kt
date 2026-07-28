@@ -53,19 +53,15 @@ private val ErrorRed1 = Color(0xFFFF0000)
 fun Question5(onNextScreen: () -> Unit) {
     val ip= NetworkConfig.SERVER_IP
 
-    // --- STATE VARIABLES ---
     var popupMessage by remember { mutableStateOf("Click the left foot of the character below ?") }
 
-    // Game Logic State
     val isErrorState = remember { mutableStateOf(false) }
     val isSuccessState = remember { mutableStateOf(false) }
 
-    // **FIXED: Scope is required for the Next button**
     val scope = rememberCoroutineScope()
 
     // --- FLASK HANDLER ---
     val question_number = "5"
-    // Use 10.0.2.2 for Android Emulator, or your specific IP
     val ip_address = "http://192.168.0.14:5000"
 
     fun sendDataToFlask(userid: String, selection: String, onResult: (String) -> Unit) {
@@ -157,7 +153,6 @@ fun Question5(onNextScreen: () -> Unit) {
 
     val overlay_boolean = remember { mutableStateOf(false) }
 
-    // This handles the Sound Overlay (Doraemon)
     LaunchedEffect(overlay_boolean.value) {
         if (overlay_boolean.value) {
             val mediaPlayer = MediaPlayer.create(context, R.raw.doraemon_alevel1q5)
@@ -165,7 +160,6 @@ fun Question5(onNextScreen: () -> Unit) {
             mediaPlayer.setOnCompletionListener {
                 it.release()
             }
-            // This delay is ONLY for the sound popup to disappear automatically
             delay(5000)
             overlay_boolean.value = false
         }

@@ -59,7 +59,6 @@ fun Quiz1Router(
                                 }
                             )
                         }
-                        // ---> ADDED SLOT 4 ROUTING HERE <---
                         4 -> {
                             QuizQuestionL4_Shell(
                                 questionData = activeQuestion,

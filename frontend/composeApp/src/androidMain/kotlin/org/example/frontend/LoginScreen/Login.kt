@@ -57,7 +57,7 @@ fun LoginScreen(onSignUpScreen: () -> Unit,onhomescreen:()->Unit,navController: 
     val scope = rememberCoroutineScope()
     fun handleNavigation(isAssessmentComplete: Boolean) {
         scope.launch {
-            delay(2000L) // Optional delay for smooth transition
+            delay(2000L)
             if (isAssessmentComplete) {
                 // Navigate to Home Screen
                 navController.navigate("HomePage") { //HomePage
@@ -206,7 +206,7 @@ fun LoginScreen(onSignUpScreen: () -> Unit,onhomescreen:()->Unit,navController: 
                 painter =backgroundPainter,
                 contentDescription = null,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop // 2. Add this line
+            contentScale = ContentScale.Crop
         )
         Column(
             verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.Top),

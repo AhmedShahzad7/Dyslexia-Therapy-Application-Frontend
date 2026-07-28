@@ -36,14 +36,13 @@ private val RedProgress = Color(0xFFF02323)
 
 @Composable
 fun ProgressTrackingScreen(
-    userId: String, // Ensure you pass down the active user credentials
+    userId: String,
     onHomeClick: () -> Unit,
     onNavigateToErrorList: () -> Unit,
     viewModel: ProgressTrackingViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    // Trigger loading exactly when the screen initializes
     LaunchedEffect(userId) {
         viewModel.loadData(userId)
     }
@@ -82,7 +81,6 @@ fun ProgressTrackingScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Yellow Dynamic Percentage Card
                     Box(
                         modifier = Modifier
                             .width(160.dp)
@@ -147,7 +145,6 @@ fun ProgressTrackingScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(15.dp)
                 ) {
-                    // Injecting actual state metrics down to custom cards
                     StatCard(
                         backgroundColor = PinkCard,
                         title = "LEVEL ATTEMPT",
@@ -168,7 +165,6 @@ fun ProgressTrackingScreen(
                         height = 180
                     )
 
-                    // Dynamic Screen Time Card
                     Box(
                         modifier = Modifier
                             .width(350.dp)
@@ -191,7 +187,7 @@ fun ProgressTrackingScreen(
                                     )
                                 )
                                 Text(
-                                    text = state.screenTimeText, // Displays live minutes
+                                    text = state.screenTimeText,
                                     style = TextStyle(
                                         fontSize = 18.sp,
                                         fontFamily = FontFamily(Font(R.font.windsol)),
@@ -202,7 +198,6 @@ fun ProgressTrackingScreen(
                             }
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // Custom Linear Progress implementation
                             Box(
                                 modifier = Modifier
                                     .width(300.dp)
@@ -213,7 +208,7 @@ fun ProgressTrackingScreen(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .fillMaxWidth(state.screenTimeFloat) // Variable bounds logic
+                                        .fillMaxWidth(state.screenTimeFloat)
                                         .fillMaxHeight()
                                         .background(RedProgress, RoundedCornerShape(12.dp))
                                 )
@@ -256,7 +251,6 @@ fun ProgressTrackingScreen(
     }
 }
 
-// Ensure StatCard matches your provided signature exactly
 @Composable
 fun StatCard(
     backgroundColor: Color,
@@ -299,13 +293,13 @@ fun StatCard(
                     modifier = Modifier.fillMaxSize()
                 )
                 CircularProgressIndicator(
-                    progress = progress, // Wired dynamically
+                    progress = progress,
                     color = progressColor,
                     strokeWidth = 12.dp,
                     modifier = Modifier.fillMaxSize()
                 )
                 Text(
-                    text = progressText, // Wired dynamically
+                    text = progressText,
                     style = TextStyle(
                         fontSize = 24.sp,
                         fontFamily = FontFamily(Font(R.font.windsol)),

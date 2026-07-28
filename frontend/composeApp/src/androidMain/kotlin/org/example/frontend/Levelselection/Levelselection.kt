@@ -40,12 +40,10 @@ import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-// Define the Baby Gemoy font
 val babyGemoyFontFamily = FontFamily(
     Font(R.font.baby_gemoy, FontWeight.Normal)
 )
 
-// Added 'quizNumber' to cleanly separate quiz targets from standard levels
 data class PlanetData(
     val imageRes: Int,
     val label: String,
@@ -62,7 +60,7 @@ data class PlanetData(
 fun Levelselection(
     onNavigateHome: () -> Unit,
     onNavigateToLevel: (Int) -> Unit,
-    onNavigateToQuiz: (Int) -> Unit // Added direct routing callback for Quizzes
+    onNavigateToQuiz: (Int) -> Unit
 ) {
     val context = LocalContext.current
     // Index mapping: 0=Lvl1, 1=Quiz1, 2=Lvl2, 3=Quiz2, 4=Lvl3, 5=Quiz3, 6=Lvl4
@@ -88,7 +86,7 @@ fun Levelselection(
             val userId = currentUser.uid
             val ip = NetworkConfig.SERVER_IP
             val client = OkHttpClient.Builder()
-                .connectTimeout(15, TimeUnit.SECONDS) // Give it more time to handshake
+                .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(15, TimeUnit.SECONDS)
                 .build()
 
@@ -112,8 +110,6 @@ fun Levelselection(
                             val jsonObject = JSONObject(result)
                             if (jsonObject.optString("status") == "success") {
 
-                                // --- STRICT PROGRESSION LOGIC ---
-                                // Directly read the absolute index evaluated by the backend server
                                 val newMaxIndex = jsonObject.optInt("assessment_unlocked_index", 0)
 
                                 Handler(Looper.getMainLooper()).post {
@@ -129,7 +125,6 @@ fun Levelselection(
         }
     }
 
-    // Fully wired with explicit target destinations
     val planets = listOf(
         PlanetData(R.drawable.p1, "LEVEL 1", Color(0xFF00006B), Color(0xFF27B51A), isLabelAbove = false, isLocked = maxUnlockedIndex < 0, levelNumber = 1),
         PlanetData(R.drawable.p2, "QUIZ 1", Color(0xFF27B51A), Color(0xFFEB4335), isLabelAbove = true,  isLocked = maxUnlockedIndex < 1, isQuiz = true, quizNumber = 1),

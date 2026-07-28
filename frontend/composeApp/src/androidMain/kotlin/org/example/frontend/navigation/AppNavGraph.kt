@@ -198,7 +198,6 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
             Question3(onNextScreen = { navController.navigate("Question4") })
         }
         composable("Question4") {
-            // Assuming Question4 handles navigation to the Assessment or Home next
 
             Question4(navController = navController)
         }
@@ -327,7 +326,6 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
         composable("QuestionL14") {
             QuestionL14(onNextScreen = { navController.navigate("QuestionL15") })
         }
-        // Inside AppNavGraph.kt -> Level 3 Therapy execution mappings
         composable("QuestionL15") {
             QuestionL15(onNextScreen = {
                 navController.navigate("HomePage") {
@@ -358,13 +356,9 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
                 }
             )
         }
-        // ==========================================
-        // QUIZZES INTEGRATION
-        // ==========================================
+
 
         composable("Quiz1Router") {
-            // Because Quiz1Router internally renders its BouncyIntro based on Quiz1Screen.Intro state,
-            // we mount the entire container interface here directly.
             Quiz1Router(
                 viewModel = sharedQuiz1ViewModel,
                 onQuizComplete = { score, total ->
@@ -400,7 +394,6 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
                 }
             })
         }
-        //////////////////////////////////////////////////
 
 
         composable("CartoonSelectionScreen") {
@@ -412,7 +405,7 @@ fun AppNavGraph(startDestination: String = "LoginScreen") {
             val userId = currentUser?.uid ?: ""
 
             ProgressTrackingScreen(
-                userId = userId, // Injects the active session ID string down to initialize ViewModel calls
+                userId = userId,
                 onHomeClick = {
                     navController.navigate("HomePage") {
                         popUpTo("HomePage") { inclusive = true }

@@ -59,20 +59,12 @@ import java.io.File
 import java.io.IOException
 import kotlin.math.roundToInt
 
-// ─────────────────────────────────────────────────────────────────────────────
-// QUIZ QUESTION 2  —  "Read the following words out loud"  (Read Aloud)
-//
-// FIX: Two changes vs the original
-//   1. Fetches with question_number=2  (backend routes to read-aloud branch)
-//   2. After the speech upload, also calls /submit_quiz_answer so every
-//      card attempt is counted toward the quiz 75% pass flag.
-//      question_number=2 is stored in Firestore.
-// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 fun QuizQuestion2(onNextScreen: () -> Unit) {
 
-    val FETCH_Q_NUM  = "2"   // backend routes to read-aloud word list
-    val SUBMIT_Q_NUM = 2     // stored in Firestore for the 75% calculation
+    val FETCH_Q_NUM  = "2"
+    val SUBMIT_Q_NUM = 2
 
     val ip      = NetworkConfig.SERVER_IP
     val context = LocalContext.current
@@ -100,7 +92,6 @@ fun QuizQuestion2(onNextScreen: () -> Unit) {
         }
     }
 
-    // ── Fetch word list ───────────────────────────────────────────────────────
     LaunchedEffect(Unit) {
         currentUser?.uid?.let { uid ->
             val client  = OkHttpClient()
@@ -120,7 +111,6 @@ fun QuizQuestion2(onNextScreen: () -> Unit) {
                                 val json = JSONObject(body)
                                 dynamicAudioUrl = if (json.isNull("audio_url")) null
                                 else json.getString("audio_url")
-                                // Backend returns "data": ["word1","word2",...]
                                 val dataArray = json.optJSONArray("data")
                                 if (dataArray != null && dataArray.length() > 0) {
                                     for (i in 0 until dataArray.length())
@@ -151,7 +141,6 @@ fun QuizQuestion2(onNextScreen: () -> Unit) {
 
     LaunchedEffect(cards.size) { if (cards.isNotEmpty()) autoDismissTop = false }
 
-    // ── Doraemon / audio overlay ──────────────────────────────────────────────
     LaunchedEffect(overlayBoolean.value) {
         if (overlayBoolean.value && !dynamicAudioUrl.isNullOrEmpty()) {
             isAudioPlaying = true
@@ -178,7 +167,6 @@ fun QuizQuestion2(onNextScreen: () -> Unit) {
         }
     }
 
-    // ── UI ────────────────────────────────────────────────────────────────────
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter            = painterResource(R.drawable.therapy_level3),
@@ -333,7 +321,7 @@ fun QuizQuestion2(onNextScreen: () -> Unit) {
                                                         isProcessing = true
                                                         val audioFile = recordedFile ?: return@clickable
 
-                                                        // Step 1: upload audio for transcription + therapy scoring
+
                                                         quiz2UploadAudio(
                                                             audioFile      = audioFile,
                                                             serverIp       = ip,
@@ -341,8 +329,7 @@ fun QuizQuestion2(onNextScreen: () -> Unit) {
                                                             userId         = userId,
                                                             questionNumber = SUBMIT_Q_NUM
                                                         ) { isCorrect ->
-                                                            // Step 2: also post to /submit_quiz_answer
-                                                            // so this card counts toward the 75% pass flag
+
                                                             submitTherapyAnswer(
                                                                 uid     = userId,
                                                                 qNum    = SUBMIT_Q_NUM,
@@ -411,10 +398,7 @@ fun QuizQuestion2(onNextScreen: () -> Unit) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Upload audio to /transcribe_and_score_therapy, then report back isCorrect
-// so the caller can separately post to /submit_quiz_answer.
-// ─────────────────────────────────────────────────────────────────────────────
+
 private fun quiz2UploadAudio(
     audioFile: File,
     serverIp: String,
@@ -440,12 +424,10 @@ private fun quiz2UploadAudio(
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                // On failure treat as incorrect so attempt still counts
                 Handler(Looper.getMainLooper()).post { onResult(false) }
             }
             override fun onResponse(call: Call, response: Response) {
                 val respBody = response.body?.string() ?: ""
-                // Backend returns {"is_correct": true/false, ...}
                 val isCorrect = try {
                     org.json.JSONObject(respBody).optBoolean("is_correct", false)
                 } catch (e: Exception) { false }
@@ -457,9 +439,7 @@ private fun quiz2UploadAudio(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Swipe card (identical behaviour to therapy SwipeCard)
-// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 fun Quiz2SwipeCard(
     modifier: Modifier = Modifier,
@@ -517,9 +497,7 @@ fun Quiz2SwipeCard(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Audio recorder for Q2 (separate class to avoid clash if Q12 is in same module)
-// ─────────────────────────────────────────────────────────────────────────────
+
 class Quiz2AudioRecorder(private val context: Context) {
     private var recorder: MediaRecorder? = null
     private var audioFile: File? = null
@@ -544,7 +522,5 @@ class Quiz2AudioRecorder(private val context: Context) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CardItem data class (only needed here if not already declared in Q1 file)
-// ─────────────────────────────────────────────────────────────────────────────
+
 data class CardItem(val id: Int, val word: String)

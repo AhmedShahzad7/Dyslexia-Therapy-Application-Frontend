@@ -51,22 +51,17 @@ fun Question18(onNextScreen: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // --- STATE VARIABLES ---
     val overlay_boolean = remember { mutableStateOf(false) }
     val speaker_boolean = remember { mutableStateOf(false) }
 
-    // Track selected indices to know which words are highlighted
     val selectedIndices = remember { mutableStateListOf<Int>() }
 
-    // --- FLASK CONFIGURATION ---
     val ip_address = "http://192.168.43.84:5000"
     val question_number = "18"
 
-    // --- FLASK FUNCTION ---
     fun sendDataToFlask(userId: String, selectedWords: List<String>) {
         val client = OkHttpClient()
         val ip= NetworkConfig.SERVER_IP
-        // Manual JSON conversion: ["word1", "word2"]
         val jsonAnswers = selectedWords.joinToString(prefix = "[", postfix = "]", separator = ",") { "\"$it\"" }
 
         val requestBody = MultipartBody.Builder()
@@ -84,7 +79,6 @@ fun Question18(onNextScreen: () -> Unit) {
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Log.e("FlaskAPI", "Error: ${e.message}")
-                // Optional: Even on failure, you might want to move forward for better UX
                 Handler(Looper.getMainLooper()).post { onNextScreen() }
             }
 
@@ -92,7 +86,6 @@ fun Question18(onNextScreen: () -> Unit) {
                 val result = response.body?.string()
                 Log.d("FlaskAPI", "Response: $result")
 
-                // Navigate to next screen on success
                 Handler(Looper.getMainLooper()).post {
                     onNextScreen()
                 }
@@ -250,7 +243,6 @@ fun Question18(onNextScreen: () -> Unit) {
                                 val selectedWords = selectedIndices.map { wordsList[it] }
                                 sendDataToFlask(currentUser.uid, selectedWords)
                             } else {
-                                // Fallback for testing without auth
                                 onNextScreen()
                             }
                         }

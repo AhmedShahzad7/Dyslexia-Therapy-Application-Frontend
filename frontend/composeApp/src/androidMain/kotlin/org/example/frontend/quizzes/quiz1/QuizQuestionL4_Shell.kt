@@ -73,7 +73,6 @@ fun QuizQuestionL4_Shell(
         }
     }
 
-    // Dynamic pool generation ensuring 4 distinct targets are rendered
     val shuffledArrows = remember(primaryTargetClean) {
         val masterPool = listOf("Up", "Down", "Left", "Right", "NE", "NW", "SE", "SW")
         val distractors = masterPool.filter { it.equals(primaryTargetClean, ignoreCase = true).not() }
@@ -88,47 +87,40 @@ fun QuizQuestionL4_Shell(
     var selectedArrowToken by remember { mutableStateOf<String?>(null) }
     var selectedWordToken by remember { mutableStateOf<String?>(null) }
 
-    // Silently tracks item state resolution without interrupting quiz progress
     val matchedPairs = remember { mutableStateListOf<String>() }
     val wrongArrows = remember { mutableStateListOf<String>() }
     val wrongWords = remember { mutableStateListOf<String>() }
 
-    // Evaluates localized matching states before dispatching payload upstream
     fun processMatchingAttempt() {
         val currentArrow = selectedArrowToken
         val currentWord = selectedWordToken
 
         if (currentArrow != null && currentWord != null) {
             if (currentArrow.equals(currentWord, ignoreCase = true)) {
-                // Correct pairing logic
                 if (!matchedPairs.contains(currentArrow)) {
                     matchedPairs.add(currentArrow)
                 }
             } else {
-                // Silently record error states to lock the matched items out
                 if (!wrongArrows.contains(currentArrow)) wrongArrows.add(currentArrow)
                 if (!wrongWords.contains(currentWord)) wrongWords.add(currentWord)
             }
 
-            // Check if all 4 target items on the board have been resolved (correctly or incorrectly)
             val totalResolved = matchedPairs.size + wrongArrows.size
             if (totalResolved >= 4) {
                 isVerifying = true
                 scope.launch {
-                    delay(800) // Brief pause so the user sees their final pairing complete
+                    delay(800)
 
-                    // Determine final payload transmission based on primary target resolution
                     val finalSubmissionPayload = if (matchedPairs.contains(primaryTargetClean)) {
-                        primaryTargetClean // Graded as Correct
+                        primaryTargetClean
                     } else {
-                        "incorrect_match_submission" // Fails the str comparison check in Flask backend
+                        "incorrect_match_submission"
                     }
 
                     onAnswerSubmitted(finalSubmissionPayload.toByteArray())
                 }
             }
 
-            // Reset active selection token buffers
             selectedArrowToken = null
             selectedWordToken = null
         }
@@ -319,7 +311,6 @@ fun QuizQuestionL4_Shell(
                             verticalArrangement = Arrangement.spacedBy(35.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // Row 1: Rotated Graphic Vectors
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -354,7 +345,6 @@ fun QuizQuestionL4_Shell(
                                         borderColor = borderColor,
                                         cardBgColor = cardBgColor,
                                         onClick = {
-                                            // Blocks selection if item is already mapped correctly or incorrectly
                                             if (!isVerifying && !isMatched && !isWrong) {
                                                 selectedArrowToken = directionStr
                                                 processMatchingAttempt()
@@ -364,7 +354,6 @@ fun QuizQuestionL4_Shell(
                                 }
                             }
 
-                            // Row 2: Text Tags mapping independent options securely
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly

@@ -45,7 +45,6 @@ import com.google.firebase.auth.FirebaseAuth
 import org.example.frontend.NetworkConfig
 import java.util.concurrent.TimeUnit
 
-// Define Colors
 private val BlueText = Color(0xFF000278)
 private val TranslucentWhite = Color(0xC7FFFFFF)
 private val SelectionOrange = Color(0xFFFFA500)
@@ -62,17 +61,14 @@ fun CartoonSelectionScreen(onNextScreen: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // --- STATE VARIABLES ---
     val speaker_boolean = remember { mutableStateOf(false) }
     var popupMessage by remember { mutableStateOf("Select your favorite Cartoon Character") }
 
     // Tracks which character is selected
     var selectedCharacterId by remember { mutableStateOf<Int?>(null) }
 
-    // Lock logic
     var isSelectionLocked by remember { mutableStateOf(false) }
 
-    // --- NETWORK CONFIG ---
     val ip_address = if (NetworkConfig.SERVER_IP.startsWith("http")) {
         NetworkConfig.SERVER_IP
     } else {
@@ -164,7 +160,6 @@ fun CartoonSelectionScreen(onNextScreen: () -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.Top)
                 ) {
-                    // Spacer reduced to 10dp to save space
                     Spacer(modifier = Modifier.height(10.dp))
 
                     // Instructions Row
@@ -211,7 +206,6 @@ fun CartoonSelectionScreen(onNextScreen: () -> Unit) {
                         }
                     }
 
-                    // Spacer reduced to 10dp to save space
                     Spacer(modifier = Modifier.height(10.dp))
 
                     // Character Grid
@@ -231,14 +225,12 @@ fun CartoonSelectionScreen(onNextScreen: () -> Unit) {
 
                     Spacer(modifier = Modifier.weight(1f))
 
-                    // --- NEXT BUTTON (Updated Design) ---
                     Box(modifier = Modifier.fillMaxWidth()) {
                         Box(
                             modifier = Modifier
-                                .align(Alignment.BottomEnd) // Position at Bottom Right
-                                .padding(end = 10.dp, bottom = 10.dp) // Add spacing from the edges
+                                .align(Alignment.BottomEnd)
+                                .padding(end = 10.dp, bottom = 10.dp)
                                 .background(
-                                    // Green if selected, Gray if not
                                     color = if (selectedCharacterId != null) Color(0xFFFFA500) else Color.Gray,
                                     shape = RoundedCornerShape(15.dp)
                                 )
@@ -287,7 +279,7 @@ private fun CharacterItem(
     Box(
         modifier = Modifier
             .width(115.dp)
-            .height(125.dp) // Reduced height from 140 to 125 to prevent overflow
+            .height(125.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null

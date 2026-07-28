@@ -147,7 +147,7 @@ fun Question8(onNextScreen:()->Unit,
         val paint = android.graphics.Paint().apply {
             color = android.graphics.Color.BLACK
             style = android.graphics.Paint.Style.STROKE
-            strokeWidth = 10f // Thicker lines show up better after resizing
+            strokeWidth = 10f
             isAntiAlias = true
             strokeJoin = android.graphics.Paint.Join.ROUND
             strokeCap = android.graphics.Paint.Cap.ROUND
@@ -348,7 +348,7 @@ suspend fun sendImageToFlaskSuspend(
                         Column(
                             modifier = Modifier
                                 .wrapContentSize(),
-                            verticalArrangement = Arrangement.spacedBy(12.dp), // space between rows
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         )
                         {
@@ -361,7 +361,7 @@ suspend fun sendImageToFlaskSuspend(
 
                                 Box(
                                     modifier = Modifier
-                                        .size(boxSizeDp) // Use the variable
+                                        .size(boxSizeDp)
                                         .background(color = Color.White)
                                         .clipToBounds()
                                         .border(2.dp, Color.Gray, RoundedCornerShape(8.dp))
@@ -374,7 +374,6 @@ suspend fun sendImageToFlaskSuspend(
                                                 },
                                                 onDrag = { change, _ ->
                                                     currentPath1?.lineTo(change.position.x, change.position.y)
-                                                    // Trigger recomposition (hacky but works for Path updates)
                                                     currentPath1 = Path().apply {
                                                         currentPath1?.let { addPath(it) }
                                                     }
@@ -471,7 +470,6 @@ suspend fun sendImageToFlaskSuspend(
                                                 },
                                                 onDrag = { change, _ ->
                                                     currentPath3?.lineTo(change.position.x, change.position.y)
-                                                    // Trigger recomposition (hacky but works for Path updates)
                                                     currentPath3 = Path().apply {
                                                         currentPath3?.let { addPath(it) }
                                                     }
@@ -504,7 +502,7 @@ suspend fun sendImageToFlaskSuspend(
                                 }
                                 Box(
                                     modifier = Modifier
-                                        .size(boxSizeDp) // Use the variable
+                                        .size(boxSizeDp)
                                         .background(color = Color.White)
                                         .clipToBounds()
                                         .border(2.dp, Color.Gray, RoundedCornerShape(8.dp))
@@ -517,7 +515,6 @@ suspend fun sendImageToFlaskSuspend(
                                                 },
                                                 onDrag = { change, _ ->
                                                     currentPath4?.lineTo(change.position.x, change.position.y)
-                                                    // Trigger recomposition (hacky but works for Path updates)
                                                     currentPath4 = Path().apply {
                                                         currentPath4?.let { addPath(it) }
                                                     }
@@ -634,8 +631,6 @@ suspend fun sendImageToFlaskSuspend(
                         .background(color = Color(0x4FFFFFFF))
 
                 ) {
-                    // --- SPEECH BUBBLE (Center Right) ---
-
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -657,7 +652,6 @@ suspend fun sendImageToFlaskSuspend(
                             )
                         )
                     }
-                    // --- DORAEMON (Bottom Left) ---
 
                     AsyncImage(
                         model = ImageRequest.Builder(context)

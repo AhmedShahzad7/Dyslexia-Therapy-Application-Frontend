@@ -61,9 +61,6 @@ import java.io.IOException
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.runtime.key
-// --- AUDIO RECORDER HELPER ---
-
-// --- AUDIO RECORDER HELPER ---
 class AudioRecorderHelperQ19(private val context: Context) {
     private var recorder: MediaRecorder? = null
     private var audioFile: File? = null
@@ -77,7 +74,6 @@ class AudioRecorderHelperQ19(private val context: Context) {
             MediaRecorder()
         }.apply {
             setAudioSource(MediaRecorder.AudioSource.MIC)
-            // UPDATED: Changed to THREE_GPP and AMR_NB for better AI transcription compatibility
             setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
             setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
             setOutputFile(audioFile?.absolutePath)
@@ -99,7 +95,6 @@ class AudioRecorderHelperQ19(private val context: Context) {
     }
 }
 
-// --- NETWORK HELPER FOR AUDIO (PHONETIC FUZZY MATCHING) ---
 fun uploadAudioForTranscription(
     audioFile: File,
     serverIp: String,
@@ -150,7 +145,6 @@ fun uploadAudioForTranscription(
     }
 }
 
-// --- HANDWRITING HELPER FUNCTIONS ---
 fun createBitmapFromPathsQ19(paths: List<Path>, size: Int): Bitmap {
     val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
     val canvas = android.graphics.Canvas(bitmap)
@@ -206,12 +200,10 @@ fun Question19(onNextScreen: () -> Unit) {
     val speaker_boolean = remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
-    // --- AUDIO STATES ---
     val audioRecorder = remember { AudioRecorderHelperQ19(context) }
     var recordedFile by remember { mutableStateOf<File?>(null) }
     var isRecording by remember { mutableStateOf(false) }
 
-    // Permission Launcher for Microphone
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
@@ -265,11 +257,10 @@ fun Question19(onNextScreen: () -> Unit) {
     val lettersOnlyQuestion = currentQuestionSentenceString.filter { it.isLetter() }
     val isplayingquestion = remember { mutableStateOf(false) }
 
-    // Backend drawing state
     val drawingState = remember { mutableStateMapOf<Int, List<Path>>() }
     LaunchedEffect(currentindexquestion.value) {
         drawingState.clear()
-        recordedFile = null // Clear audio file reference on new question
+        recordedFile = null
     }
 
     Box(
@@ -399,11 +390,9 @@ fun Question19(onNextScreen: () -> Unit) {
                             )
                             Spacer(modifier = Modifier.width(12.dp))
 
-                            // Recording visual indicator
                             if (isRecording) {
                                 Text("🔴 Recording...", color = Color.Red, fontSize = 12.sp)
                             }
-                            // --- MICROPHONE BUTTON (Custom Image Style) ---
                             Image(
                                 painter = painterResource(
                                     id = if (isRecording) R.drawable.pause else R.drawable.play

@@ -56,7 +56,6 @@ enum class Direction { UP, DOWN, LEFT, RIGHT }
 @Composable
 fun Question4(onNextScreen: () -> Unit) {
     val ip= NetworkConfig.SERVER_IP
-    // --- STATE VARIABLES ---
     var popupMessage by remember { mutableStateOf("Match the arrow to the correct word") }
 
     // GIPHY HANDLER
@@ -75,7 +74,6 @@ fun Question4(onNextScreen: () -> Unit) {
 
     // --- FLASK HANDLER ---
     val question_number = "4"
-    // Use 10.0.2.2 for Emulator, use specific IP for real device
     val ip_address = "http://192.168.0.14:5000"
 
     fun sendDataToFlask(userid: String, selection: String, onResult: (String) -> Unit) {
@@ -128,18 +126,15 @@ fun Question4(onNextScreen: () -> Unit) {
         }
     }
 
-    // --- GAME LOGIC STATE ---
     val selectedArrow = remember { mutableStateOf<Direction?>(null) }
     val selectedWord = remember { mutableStateOf<Direction?>(null) }
 
-    // Lists to track locked states
     val solvedMatches = remember { mutableStateListOf<Direction>() }     // Stores Correctly matched directions (Green)
     val wrongArrows = remember { mutableStateListOf<Direction>() }       // Stores Arrows matched incorrectly (Red)
     val wrongWords = remember { mutableStateListOf<Direction>() }        // Stores Words matched incorrectly (Red)
 
     val scope = rememberCoroutineScope()
 
-    // --- MATCHING LOGIC FUNCTION ---
     fun checkMatch() {
         val arrow = selectedArrow.value
         val word = selectedWord.value

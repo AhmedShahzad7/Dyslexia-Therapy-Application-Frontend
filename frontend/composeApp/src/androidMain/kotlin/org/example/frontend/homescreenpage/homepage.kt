@@ -44,7 +44,6 @@ import java.io.IOException
 
 
 
-// --- Colors ---
 private val NavBlue = Color(0xDE000278)
 private val CoinOrange = Color(0xFFF0A523)
 private val ProgressCyan = Color(0xFF1FFFD2)
@@ -71,7 +70,7 @@ fun HomePage(onNavigateToProgress: () -> Unit,
             override fun onFailure(call: Call, e: IOException) {
                 Log.e("FlaskAPI", "Error fetching scores! ${e.message}", e)
                 Handler(Looper.getMainLooper()).post {
-                    onResult(emptyList()) // Return an empty list on failure
+                    onResult(emptyList())
                 }
             }
             override fun onResponse(call: Call, response: Response) {
@@ -81,14 +80,12 @@ fun HomePage(onNavigateToProgress: () -> Unit,
 
                 if (response.isSuccessful && result != null) {
                     try {
-                        //  Parse the JSON response: {"status": "success", "data": [...]}
                         val jsonObject = JSONObject(result)
                         val status = jsonObject.optString("status")
 
                         if (status == "success") {
                             val dataArray = jsonObject.getJSONArray("data")
 
-                            // Loop through the array and convert to LevelScore objects
                             for (i in 0 until dataArray.length()) {
                                 val item = dataArray.getJSONObject(i)
                                 val level = item.getString("level")
@@ -103,7 +100,6 @@ fun HomePage(onNavigateToProgress: () -> Unit,
                     Log.e("FlaskAPI", "Server error or empty response: ${response.code}")
                 }
 
-                //Return the parsed list on the Main Thread so Compose can use it
                 Handler(Looper.getMainLooper()).post {
                     onResult(parsedScores)
                 }
@@ -290,7 +286,6 @@ fun HomePage(onNavigateToProgress: () -> Unit,
                     modifier = Modifier
                         .width(369.dp)
                         .height(258.dp)
-                        // 3. Apply Scale Modifier
                         .scale(scaleLevels)
                         .border(width = 1.dp, color = DarkBlueBorder, shape = RoundedCornerShape(size = 35.dp))
                         .clickable(

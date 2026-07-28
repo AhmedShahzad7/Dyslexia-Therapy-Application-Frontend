@@ -34,28 +34,23 @@ val BabyGemoyFont = FontFamily(Font(R.font.baby_gemoy))
 @Composable
 fun BouncyLevelScreen(
     viewModel: TherapyViewModel,
-    onIntroFinished: () -> Unit // Call this to navigate to Question 1
+    onIntroFinished: () -> Unit
 ) {
     val context = LocalContext.current
 
-    // 1. Trigger the session fetch the moment this screen enters the composition
     LaunchedEffect(Unit) {
         viewModel.initSession()
     }
 
-    // Timer state to ensure the user actually gets to see the intro animation
     var animationFinished by remember { mutableStateOf(false) }
 
-    // Let the intro run for a set time (e.g., 3.5 seconds) before flagging it done
     LaunchedEffect(Unit) {
         delay(3500L)
         animationFinished = true
     }
 
-    // 2. Navigation Coordinator: Wait for BOTH the animation and the network download
     LaunchedEffect(animationFinished, viewModel.isLoading.value) {
         if (animationFinished && !viewModel.isLoading.value) {
-            // If there's an error, you might want to handle it, but if we have data, let's go!
             if (viewModel.sessionQuestions.isNotEmpty()) {
                 onIntroFinished()
             }
@@ -81,7 +76,6 @@ fun BouncyLevelScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // --- BOTTOM LAYER: Background Video ---
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
@@ -93,11 +87,8 @@ fun BouncyLevelScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        // --- MIDDLE LAYER: Bouncy Text ---
         BouncyTextOverlay()
 
-        // --- TOP LAYER: Network Fallback Indicator ---
-        // If the animation finishes but the server is slow, show a subtle loading spinner
         if (animationFinished && viewModel.isLoading.value) {
             Box(
                 modifier = Modifier
@@ -113,7 +104,6 @@ fun BouncyLevelScreen(
             }
         }
 
-        // Optional: Display error if backend fails
         viewModel.errorMessage.value?.let { error ->
             if (animationFinished) {
                 Box(

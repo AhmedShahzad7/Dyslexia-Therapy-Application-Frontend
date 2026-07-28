@@ -182,7 +182,6 @@ fun GenderButton(
             .clickable(enabled = enabled) { onClick() }
     ) {
 
-        // ✅ Centered text
         Text(
             text = text,
             modifier = Modifier.align(Alignment.Center),
@@ -192,7 +191,6 @@ fun GenderButton(
             textAlign = TextAlign.Center
         )
 
-        // ✅ Rounded tick on right
         if (isSelected) {
             Box(
                 modifier = Modifier

@@ -28,10 +28,8 @@ class Quiz1ViewModel : ViewModel() {
     val correctAnswersCount = mutableIntStateOf(0)
     val quizProgress = mutableFloatStateOf(0.0f)
 
-    // Tracks overall submission state during backend evaluation runs
     val isFinalizingEvaluation = mutableStateOf(false)
 
-    // 1. INITIALIZE QUIZ SESSION (Fetches randomized sequence from Flask)
     fun initQuizSession() {
         val uid = FirebaseAuth.getInstance().currentUser?.uid
         if (uid == null) {
@@ -119,7 +117,6 @@ class Quiz1ViewModel : ViewModel() {
         } else null
     }
 
-    // 2. INTERMEDIATE SUBMISSION (Saves drawing bytes locally and moves forward)
     fun submitAnswerWithPayload(imageBytes: ByteArray?) {
         getCurrentQuestion()?.capturedAnswerBytes = imageBytes
 
@@ -131,7 +128,6 @@ class Quiz1ViewModel : ViewModel() {
         }
     }
 
-    // 3. BATCH EVALUATION (Transmits all collected answers to Flask at summary stage)
     private fun finalizeQuizEvaluation() {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         isFinalizingEvaluation.value = true
@@ -158,7 +154,6 @@ class Quiz1ViewModel : ViewModel() {
             }
             metadataArray.put(metaObject)
 
-            // Attach user input files directly to the multipart request
             question.capturedAnswerBytes?.let { bytes ->
                 multipartBuilder.addFormDataPart(
                     "file_$index",

@@ -42,13 +42,7 @@ import org.example.frontend.NetworkConfig
 import org.example.frontend.R
 import org.json.JSONObject
 
-// ─────────────────────────────────────────────────────────────────────────────
-// QUIZ QUESTION 3  —  "Circle the words that rhyme the same"  (like Q13)
-// Pink theme · windsol font · Doraemon overlay · sound button
-//
-// FIX: replaced undefined quizSubmitAnswer() with submitTherapyAnswer()
-//      which is defined in QuizQuestion1.kt (same package).
-// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 fun QuizQuestion3(onNextScreen: () -> Unit) {
 
@@ -77,7 +71,6 @@ fun QuizQuestion3(onNextScreen: () -> Unit) {
         )
     }
 
-    // ── Fetch from backend ────────────────────────────────────────────────────
     LaunchedEffect(Unit) {
         currentUser?.uid?.let { uid ->
             val client  = OkHttpClient()
@@ -146,13 +139,10 @@ fun QuizQuestion3(onNextScreen: () -> Unit) {
         }
     }
 
-    // ── Submit selections → /submit_quiz_answer ───────────────────────────────
-    // Uses submitTherapyAnswer() defined in QuizQuestion1.kt (same package).
-    // Each selected word is checked: correct if its last 2 chars match target.
+
     fun submitAndNavigate() {
         currentUser?.uid?.let { userId ->
             if (selectedIndices.value.isEmpty()) {
-                // Nothing selected → submit as incorrect then move on
                 submitTherapyAnswer(
                     uid     = userId,
                     qNum    = CURRENT_QUESTION_NUMBER,
@@ -180,7 +170,6 @@ fun QuizQuestion3(onNextScreen: () -> Unit) {
         } ?: onNextScreen()
     }
 
-    // ── UI ────────────────────────────────────────────────────────────────────
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter            = painterResource(R.drawable.therapy_level3),
@@ -340,9 +329,7 @@ fun QuizQuestion3(onNextScreen: () -> Unit) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Selectable circle — pink selected state
-// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 private fun QuizOptionCircleQ3(
     text: String,

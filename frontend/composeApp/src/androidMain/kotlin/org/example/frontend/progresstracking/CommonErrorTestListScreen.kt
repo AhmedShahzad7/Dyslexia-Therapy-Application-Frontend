@@ -32,14 +32,12 @@ import androidx.compose.ui.unit.sp
 import org.example.frontend.R
 import org.example.frontend.api.RetrofitClient
 
-// --- Design Palette Constants ---
 private val DarkBlue = Color(0xFF000278)
 private val YellowText = Color(0xFFFFE100)
 private val PureWhite = Color(0xFFFFFFFF)
-private val TranslucentSurface = Color(0xE6FFFFFF) // 90% Opacity Solid Card Base
+private val TranslucentSurface = Color(0xE6FFFFFF)
 private val NavBlue = Color(0xD9000278)
 
-// Domain Categorization Accents
 private val SpatialAccent = Color(0xFFD214BF)   // Pink
 private val AlphabetAccent = Color(0xFF33BDF8)  // Light Blue
 private val WordAccent = Color(0xFFF0A523)      // Orange
@@ -55,7 +53,6 @@ fun CommonErrorTestListScreen(onHomeClick: () -> Unit, userId: String) {
     LaunchedEffect(userId) {
         try {
             val response = RetrofitClient.apiService.getCommonErrors(userId)
-            // Group payload by source category cleanly to separate Assessments from Active Quizzes
             groupedErrors = response.groupBy { it.sourceCategory.ifBlank { "Uncategorized Sessions" } }
 
             if (response.isEmpty()) {
@@ -132,8 +129,6 @@ fun CommonErrorTestListScreen(onHomeClick: () -> Unit, userId: String) {
                             )
                         }
                         else -> {
-                            // Categorized Scrolling List
-                            // Modernized Categorized Layout execution routing
                             LazyColumn(
                                 verticalArrangement = Arrangement.spacedBy(16.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -141,21 +136,17 @@ fun CommonErrorTestListScreen(onHomeClick: () -> Unit, userId: String) {
                                     .fillMaxSize()
                                     .padding(horizontal = 16.dp)
                             ) {
-                                // Group payload dynamically by server tags
                                 groupedErrors.forEach { (category, errors) ->
 
-                                    // Sticky section headers map top-level scopes (Assessments vs Quizzes)
                                     stickyHeader {
                                         CategorySectionHeader(title = category)
                                     }
 
-                                    // Render detailed mistake profiles below active anchor headers
                                     items(errors) { error ->
                                         ModernErrorCard(errorItem = error)
                                     }
                                 }
 
-                                // Bottom padding bumper protects visual contents from overlapping footer layouts
                                 item { Spacer(modifier = Modifier.height(120.dp)) }
                             }
                         }
@@ -163,7 +154,6 @@ fun CommonErrorTestListScreen(onHomeClick: () -> Unit, userId: String) {
                 }
             }
 
-            // Fixed Bottom Bar Navigation Interface
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -221,7 +211,6 @@ fun CategorySectionHeader(title: String) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ModernErrorCard(errorItem: DyslexiaError) {
-    // Determine target accent tint via domain naming indicators
     val accentTint = when {
         errorItem.levelTitle.contains("Level_1", ignoreCase = true) ||
                 errorItem.levelTitle.contains("Spatial", ignoreCase = true) -> SpatialAccent
@@ -246,7 +235,6 @@ fun ModernErrorCard(errorItem: DyslexiaError) {
             .padding(end = 16.dp, top = 14.dp, bottom = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Visual Border Tab accenting layout side
         Box(
             modifier = Modifier
                 .width(8.dp)
@@ -273,7 +261,6 @@ fun ModernErrorCard(errorItem: DyslexiaError) {
                 )
             )
 
-            // Dynamic Chip Flow Layout mapping targeted concepts
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),

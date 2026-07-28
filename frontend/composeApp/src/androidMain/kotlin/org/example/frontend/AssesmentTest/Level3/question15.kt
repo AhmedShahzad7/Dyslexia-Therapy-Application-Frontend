@@ -122,7 +122,7 @@ fun createBitmapFromPaths(paths: List<Path>, width: Int, height: Int): Bitmap {
     val paint = android.graphics.Paint().apply {
         color = android.graphics.Color.BLACK
         style = android.graphics.Paint.Style.STROKE
-        strokeWidth = 10f // Thicker lines show up better after resizing
+        strokeWidth = 10f
         isAntiAlias = true
         strokeJoin = android.graphics.Paint.Join.ROUND
         strokeCap = android.graphics.Paint.Cap.ROUND
@@ -250,7 +250,6 @@ fun Question15(onNextScreen:()->Unit){
     }
 
 
-    //CARD PLAY BUTTON   //REMINDER TO ADD ID PARAMETER FOR BACKEND
     fun Clicked_Play(){
         if(!play_boolean.value){
             play_boolean.value = true
@@ -359,12 +358,11 @@ fun Question15(onNextScreen:()->Unit){
                         SwipeCard_Box(
                             modifier = Modifier
                                 .graphicsLayer {
-                                    // Slight scale for cards underneath
+
                                     val scale = if (isTopCard) 1f else 0.95f
                                     scaleX = scale
                                     scaleY = scale
 
-                                    // Push lower cards slightly down
                                     translationY = (cards.lastIndex - index) * 10f
                                 },
                             enabled = false,
@@ -405,10 +403,8 @@ fun Question15(onNextScreen:()->Unit){
                                         )
                                     )
                                 }
-//
-//                                WordGrid(word = card.word)
                                 val chunks = card.word.chunked(3)
-                                var globalIndexCounter = 0 // Helps us track index 0, 1, 2, 3... across rows
+                                var globalIndexCounter = 0
 
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -442,19 +438,14 @@ fun Question15(onNextScreen:()->Unit){
                                             .background(color = Color(0xF527B51A), shape = RoundedCornerShape(size = 35.dp))
                                             .padding(start = 10.dp, top = 10.dp, end = 10.dp, bottom = 10.dp)
                                             .clickable(enabled = !isLoading){
-                                                // A. Check if they drew something for every letter
                                                 if (drawingState.size < card.word.length) {
-                                                    // Optional: Show Toast "Please fill all boxes"
                                                     Log.d("Submission", "Incomplete drawings")
                                                     return@clickable
                                                 }
                                                 isLoading = true
 
-                                                // B. Prepare data for submission
-                                                // We need the density to calculate pixel size for bitmap
-                                                val boxSizePx = 150 // 50dp * 3 (approx) or calculated via density
+                                                val boxSizePx = 150
 
-                                                // Convert Map to a List of ByteArrays (Images) in order
                                                 val imageList = card.word.indices.map { index ->
                                                     val paths = drawingState[index] ?: emptyList()
                                                     val bitmap = createBitmapFromPaths(paths, boxSizePx, boxSizePx)
@@ -464,15 +455,13 @@ fun Question15(onNextScreen:()->Unit){
                                                 if (currentUser != null) {
                                                     val userId = currentUser.uid
 
-                                                    // C. Send to Flask
                                                     sendBatchImagesToFlask(
-                                                        userID = userId, // Replace with actual ID
+                                                        userID = userId,
                                                         word = card.word,
                                                         images = imageList
                                                     ) { result ->
                                                         Log.d("FlaskAPI", "Result: $result")
                                                         isLoading = false
-                                                        // Handle Success (e.g., swipe card away)
                                                         triggerAutoSwipe = true
                                                     }
                                                 }else{
@@ -572,7 +561,6 @@ fun Question15(onNextScreen:()->Unit){
                         .background(color = Color(0x4FFFFFFF))
 
                 ) {
-                    // --- SPEECH BUBBLE (Center Right) ---
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -594,7 +582,6 @@ fun Question15(onNextScreen:()->Unit){
                             )
                         )
                     }
-                    // --- DORAEMON (Bottom Left) ---
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(R.drawable.doraemon2)
@@ -621,7 +608,7 @@ fun Question15(onNextScreen:()->Unit){
 
 
 
-//SSWIPE CARD COMPONENT
+//SWIPE CARD COMPONENT
 
 @Composable
 fun SwipeCard_Box(
@@ -641,7 +628,7 @@ fun SwipeCard_Box(
     LaunchedEffect(autoDismiss) {
         if (autoDismiss) {
             offsetX.animateTo(
-                targetValue = 800f, // slide right
+                targetValue = 800f,
                 animationSpec = tween(300)
             )
             alpha.animateTo(
@@ -672,7 +659,6 @@ fun SwipeCard_Box(
                     onDragEnd = {
                         scope.launch {
                             if (kotlin.math.abs(offsetX.value) > swipeThreshold) {
-                                // Dismiss
                                 launch {
                                     offsetX.animateTo(
                                         targetValue = offsetX.value * 3,
@@ -755,7 +741,6 @@ fun SwipeCard_Box(
 //    }
 //}
 
-// A reusable styled box for a single letter
 @Composable
 fun LetterBox(char: Char,
     paths: List<Path>,
@@ -767,7 +752,7 @@ fun LetterBox(char: Char,
 
     Box(
         modifier = Modifier
-            .size(boxSizeDp) // Use the variable
+            .size(boxSizeDp)
             .background(color = Color.White)
             .clipToBounds()
 

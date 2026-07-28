@@ -300,7 +300,7 @@ fun Question3(onNextScreen: () -> Unit){
                         )
                     }
 
-                    //UP
+
                     Row(
                         modifier = Modifier
                             .width(150.dp)
@@ -346,23 +346,13 @@ fun Question3(onNextScreen: () -> Unit){
             }//END OF MIDDLE BOX
             Box(
                 modifier = Modifier
-                    .align(Alignment.BottomEnd) // Position at Bottom Right of the Blur Box
-                    .padding(end = 10.dp, bottom = 10.dp) // Add spacing from the edges
-                    .background(Color(0xFF27B51A), RoundedCornerShape(15.dp)) // Green bg
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 10.dp, bottom = 10.dp)
+                    .background(Color(0xFF27B51A), RoundedCornerShape(15.dp))
                     .clickable {
-//                        // 1. Convert drawing to bitmap
-//                        val bitmap = createBitmapFromPaths(paths, boxSizePx, boxSizePx)
-//                        val byteArray = bitmapToByteArray(bitmap)
-//
-//                        // 2. Send to Flask API
-//                        sendImageToFlask(byteArray) { result ->
-//                            Log.d("API_RESULT", result)
-//                        }
-
-                        // 3. Navigate to next screen
                         onNextScreen()
                     }
-                    .padding(horizontal = 20.dp, vertical = 5.dp) // Padding inside the button
+                    .padding(horizontal = 20.dp, vertical = 5.dp)
             ) {
                 Text(
                     text = "Next",
@@ -374,10 +364,9 @@ fun Question3(onNextScreen: () -> Unit){
                     )
                 )
             }
-        } //END OF ORIGINAL SCREEN
+        }
 
 
-        //GREY OVERLAY HANDLED BY IF STATEMENT
         if(overlay_boolean.value){
             Box(
                 modifier=Modifier
@@ -395,7 +384,6 @@ fun Question3(onNextScreen: () -> Unit){
                         .background(color = Color(0x4FFFFFFF))
 
                 ) {
-                    // --- SPEECH BUBBLE (Center Right) ---
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -418,7 +406,6 @@ fun Question3(onNextScreen: () -> Unit){
                             )
                         )
                     }
-                    // --- DORAEMON (Bottom Left) ---
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(R.drawable.doraemon)

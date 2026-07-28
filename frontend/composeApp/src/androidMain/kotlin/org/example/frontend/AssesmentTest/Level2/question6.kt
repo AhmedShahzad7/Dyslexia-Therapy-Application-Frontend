@@ -210,7 +210,7 @@ fun Question6(onNextScreen: () -> Unit){
                                         word = word,
                                         userid = currentUser,
                                         modifier = Modifier
-                                            .width(75.dp) // Adjusted width to fit better
+                                            .width(75.dp)
                                             .height(50.dp)
                                     )
                                 }
@@ -270,7 +270,6 @@ fun Question6(onNextScreen: () -> Unit){
                         .background(color = Color(0x4FFFFFFF))
 
                 ) {
-                    // --- SPEECH BUBBLE (Center Right) ---
 
                     Box(
                         contentAlignment = Alignment.Center,
@@ -293,7 +292,6 @@ fun Question6(onNextScreen: () -> Unit){
                             )
                         )
                     }
-                    // --- DORAEMON (Bottom Left) ---
 
                     AsyncImage(
                         model = ImageRequest.Builder(context)
@@ -364,10 +362,9 @@ fun wordboxesp(word: String, userid: String, modifier: Modifier = Modifier) {
                 shape = RoundedCornerShape(8.dp)
             )
             .background(color = Color.White, shape = RoundedCornerShape(8.dp))
-            .clickable(enabled = !isProcessing) { // Prevent double clicks
+            .clickable(enabled = !isProcessing) {
                 isProcessing = true
                 sendLetterToFlask(userid, word) { response ->
-                    // Logic to parse the response
                     borderColor = if (response.trim()=="correct") {
                         Color(0xFF27B51A) // Green
 

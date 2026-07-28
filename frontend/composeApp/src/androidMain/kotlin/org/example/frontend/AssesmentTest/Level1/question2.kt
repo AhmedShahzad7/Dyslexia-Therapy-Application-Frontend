@@ -580,7 +580,7 @@ fun Question2(onNextScreen: () -> Unit){
                         .background(color = Color(0x4FFFFFFF))
 
                 ) {
-                    // --- SPEECH BUBBLE (Center Right) ---
+
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -602,7 +602,7 @@ fun Question2(onNextScreen: () -> Unit){
                             )
                         )
                     }
-                    // --- DORAEMON (Bottom Left) ---
+
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(R.drawable.doraemon2)

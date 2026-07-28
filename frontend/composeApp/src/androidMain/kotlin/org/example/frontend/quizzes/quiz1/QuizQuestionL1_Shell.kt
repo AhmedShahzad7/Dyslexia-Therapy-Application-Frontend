@@ -53,7 +53,6 @@ fun QuizQuestionL1_Shell(
     questionData: QuizQuestion,
     currentProgress: Float,
     questionNumber: Int,
-    // ---> FIXED SIGNATURE: Outputs the binary drawing array upward to the Router <---
     onAnswerSubmitted: (ByteArray?) -> Unit
 ) {
     val context = LocalContext.current
@@ -327,7 +326,6 @@ fun QuizQuestionL1_Shell(
                             color = Color(0x88FFFFFF),
                             shape = RoundedCornerShape(24.dp)
                         )
-                        // ---> FIXED TRIGGER: Invokes callback passing encoded byte array upward <---
                         .clickable(enabled = !isSubmitting && paths.isNotEmpty()) {
                             isSubmitting = true
 
@@ -336,7 +334,6 @@ fun QuizQuestionL1_Shell(
                             bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
                             val payloadBytes = stream.toByteArray()
 
-                            // Dispatches data upward without referencing the ViewModel directly
                             onAnswerSubmitted(payloadBytes)
                         }
                         .padding(horizontal = 45.dp, vertical = 16.dp),

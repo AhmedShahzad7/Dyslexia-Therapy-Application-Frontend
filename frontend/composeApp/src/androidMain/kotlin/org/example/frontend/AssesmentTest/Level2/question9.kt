@@ -80,13 +80,11 @@ fun Question9(onNextScreen: () -> Unit) {
     val currentIndexwords = remember { mutableStateOf(0) }
     val isplayingwords = remember { mutableStateOf(false) }
 
-    // --- AUDIO & NETWORK STATES ---
     val audioRecorder = remember { AudioRecorderHelper(context) }
     var recordedFile by remember { mutableStateOf<File?>(null) }
     var isProcessing by remember { mutableStateOf(false) }
     var transcriptionText by remember { mutableStateOf("") }
 
-    // Permission Launcher for Microphone
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
@@ -271,17 +269,14 @@ fun Question9(onNextScreen: () -> Unit) {
                                                 transcriptionText = result ?: "Error"
                                                 Log.d("FlaskAPI", "Phoneme Match Result: $transcriptionText")
 
-                                                // If successful (or if you just want to move on regardless), advance index
                                                 if (transcriptionText.contains("\"is_correct\": true")) {
                                                     if (currentIndexwords.value < words.lastIndex) {
                                                         currentIndexwords.value++
-                                                        recordedFile = null // Reset for next word
+                                                        recordedFile = null
                                                     } else {
-                                                        onNextScreen() // Reached the end!
+                                                        onNextScreen()
                                                     }
                                                 } else {
-                                                    // Move on anyway for the test, or let them try again.
-                                                    // (Currently forcing them to next word)
                                                     if (currentIndexwords.value < words.lastIndex) {
                                                         currentIndexwords.value++
                                                         recordedFile = null
@@ -366,11 +361,10 @@ fun Question9(onNextScreen: () -> Unit) {
     }
 }
 
-// --- NETWORK HELPER FOR PHONEMES ---
 fun uploadAudioForTranscriptionPhoneme(
     audioFile: File,
     serverIp: String,
-    targetSound: String, // Sending "target_sound" to match Flask logic
+    targetSound: String,
     userId: String,
     onResult: (String?) -> Unit
 ) {
@@ -381,7 +375,7 @@ fun uploadAudioForTranscriptionPhoneme(
             .setType(MultipartBody.FORM)
             .addFormDataPart("target_sound", targetSound)
             .addFormDataPart("user_id", userId)
-            .addFormDataPart("question_number", "9") // Hardcoded to Question 9
+            .addFormDataPart("question_number", "9")
             .addFormDataPart(
                 "audio",
                 audioFile.name,
@@ -391,7 +385,6 @@ fun uploadAudioForTranscriptionPhoneme(
 
         val baseUrl = if (serverIp.startsWith("http")) serverIp else "http://$serverIp"
 
-        // Using the new specific phoneme route
         val request = Request.Builder()
             .url("$baseUrl/transcribe_phoneme")
             .post(requestBody)

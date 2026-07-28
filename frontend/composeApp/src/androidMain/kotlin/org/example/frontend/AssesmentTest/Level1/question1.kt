@@ -291,7 +291,7 @@ fun Question1(onNextScreen: () -> Unit){
                 //Canvas
                 Box(
                     modifier = Modifier
-                        .size(boxSizeDp) // Use the variable
+                        .size(boxSizeDp)
                         .background(color = Color.White)
                         .clipToBounds()
                         .border(width = 4.dp, color = Color(0xFF27B51A))
@@ -304,7 +304,6 @@ fun Question1(onNextScreen: () -> Unit){
                                 },
                                 onDrag = { change, _ ->
                                     currentPath?.lineTo(change.position.x, change.position.y)
-// Trigger recomposition (hacky but works for Path updates)
                                     currentPath = Path().apply {
                                         currentPath?.let { addPath(it) }
                                     }
@@ -333,9 +332,9 @@ fun Question1(onNextScreen: () -> Unit){
             }
             Box(
                 modifier = Modifier
-                    .align(Alignment.BottomEnd) // Position at Bottom Right of the Blur Box
-                    .padding(end = 20.dp, bottom = 20.dp) // Add spacing from the edges
-                    .background(Color(0xFF27B51A), RoundedCornerShape(15.dp)) // Green bg
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 20.dp, bottom = 20.dp)
+                    .background(Color(0xFF27B51A), RoundedCornerShape(15.dp))
                     .clickable {
 
                             val bitmap = createBitmapFromPaths(paths, boxSizePx, boxSizePx)
@@ -349,7 +348,7 @@ fun Question1(onNextScreen: () -> Unit){
                             }
 
                     }
-                    .padding(horizontal = 40.dp, vertical = 15.dp) // Padding inside the button
+                    .padding(horizontal = 40.dp, vertical = 15.dp)
             ) {
                 Text(
                     text = "Next",
@@ -384,7 +383,7 @@ fun Question1(onNextScreen: () -> Unit){
                         .background(color = Color(0x4FFFFFFF))
 
                 ) {
-                // --- SPEECH BUBBLE (Center Right) ---
+
 
                     Box(
                         contentAlignment = Alignment.Center,
@@ -407,7 +406,7 @@ fun Question1(onNextScreen: () -> Unit){
                             )
                         )
                     }
-                    // --- DORAEMON (Bottom Left) ---
+
 
                     AsyncImage(
                         model = ImageRequest.Builder(context)

@@ -70,8 +70,6 @@ fun QuizQuestionL3_Shell(
             .build()
     }
 
-    // --- 1. EXPANDED ROTATIONAL ENGINE ---
-    // Evaluates both cardinal and intermediate target strings to rotate the base arrow accurately
     val targetRotationDegrees = remember(questionData.targetWord) {
         when (questionData.targetWord.trim().lowercase(Locale.ROOT)) {
             "down" -> 0f
@@ -86,8 +84,6 @@ fun QuizQuestionL3_Shell(
         }
     }
 
-    // --- 2. DYNAMIC DISTRACTOR GENERATOR ---
-    // Maps exact conceptual opposites for all 8 spatial paths to generate challenge options
     val buttonOptions = remember(questionData.targetWord) {
         val correctWord = questionData.targetWord.trim().replaceFirstChar {
             if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
@@ -103,14 +99,14 @@ fun QuizQuestionL3_Shell(
             "se" -> "NW"
             "sw" -> "NE"
             else -> "Down"
-        }.uppercase(Locale.ROOT) // Enforce clean capitalization mapping
+        }.uppercase(Locale.ROOT)
 
         listOf(correctWord.uppercase(Locale.ROOT), distractorWord).shuffled()
     }
 
     val buttonColors = remember(buttonOptions) {
         mutableStateListOf<Color>().apply {
-            buttonOptions.forEach { _ -> add(Color(0x4400E5FF)) } // Subtly tinted base outline
+            buttonOptions.forEach { _ -> add(Color(0x4400E5FF)) }
         }
     }
 
@@ -120,7 +116,6 @@ fun QuizQuestionL3_Shell(
         }
     }
 
-    // Dynamic Text-to-Speech loop
     LaunchedEffect(overlayBoolean.value) {
         if (overlayBoolean.value && questionData.audioUrl != null) {
             isAudioPlaying = true
@@ -160,7 +155,6 @@ fun QuizQuestionL3_Shell(
 
     // MAIN VIEWPLANE
     Box(modifier = Modifier.fillMaxSize()) {
-        // --- LAYER 1: Deep Space Aesthetic ---
         Image(
             painter = painterResource(R.drawable.quiz1_q3), // Reuses uniform space backdrop safely
             contentDescription = "Cosmic Testing Background",
@@ -168,7 +162,6 @@ fun QuizQuestionL3_Shell(
             modifier = Modifier.fillMaxSize()
         )
 
-        // --- LAYER 2: Absolute Overhead Progress Display ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -182,7 +175,6 @@ fun QuizQuestionL3_Shell(
             )
         }
 
-        // --- LAYER 3: Polished "White Glass" Container ---
         Box(
             modifier = Modifier
                 .width(330.dp)
@@ -325,7 +317,6 @@ fun QuizQuestionL3_Shell(
                                 .clickable {
                                     if (!isVerifying) {
                                         isVerifying = true
-                                        // Cosmic Space Glow: Emphasizes user entry selection cleanly
                                         buttonColors[index] = Color(0xFF00E5FF)
                                         buttonBackgrounds[index] = Color(0x3300E5FF)
                                         scope.launch {
@@ -353,7 +344,6 @@ fun QuizQuestionL3_Shell(
             }
         }
 
-        // --- LAYER 4: Companion Guidance Frame ---
         if (overlayBoolean.value) {
             Box(
                 modifier = Modifier

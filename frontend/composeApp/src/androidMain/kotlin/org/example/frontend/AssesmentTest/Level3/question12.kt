@@ -88,7 +88,6 @@ fun Question12(onNextScreen:()->Unit) {
         )
     }
 
-    // --- AUDIO & NETWORK STATES ---
     val audioRecorder = remember { AudioRecorderHelper(context) }
     var recordedFile by remember { mutableStateOf<File?>(null) }
     var isProcessing by remember { mutableStateOf(false) }
@@ -474,11 +473,10 @@ fun SwipeCard(
     }
 }
 
-// --- NETWORK HELPER FOR AUDIO (PHONETIC FUZZY MATCHING) ---
 fun uploadAudioForTranscription(
     audioFile: File,
     serverIp: String,
-    targetWord: String, // <-- Added targetWord parameter
+    targetWord: String,
     userId:String,
 
     onResult: (String?) -> Unit
@@ -486,10 +484,9 @@ fun uploadAudioForTranscription(
     try {
         val client = OkHttpClient()
 
-        // Add BOTH the audio file and the target word to the form
         val requestBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
-            .addFormDataPart("target_word", targetWord) // Sending the word to Flask
+            .addFormDataPart("target_word", targetWord)
             .addFormDataPart(
                 "audio",
                 audioFile.name,
@@ -502,7 +499,6 @@ fun uploadAudioForTranscription(
 
         val baseUrl = if (serverIp.startsWith("http")) serverIp else "http://$serverIp"
 
-        // Pointing to the new route we just created!
         val request = Request.Builder()
             .url("$baseUrl/transcribe_and_score")
             .post(requestBody)
@@ -531,7 +527,6 @@ fun uploadAudioForTranscription(
         }
     }
 }
-// --- AUDIO RECORDER HELPER ---
 class AudioRecorderHelper(private val context: Context) {
     private var recorder: MediaRecorder? = null
     private var audioFile: File? = null

@@ -128,13 +128,12 @@ fun Question13(onNextScreen: () -> Unit){
             }
             .build()
     }
-    //SENDING ERRORS TO FLASK VIA TEMP STORE VARIABLE
     val question_number="13"
     fun toggleSelection(word: String) {
         if (tempStore.contains(word)) {
-            tempStore.remove(word) // Deselect
+            tempStore.remove(word)
         } else {
-            tempStore.add(word)    // Select
+            tempStore.add(word)
         }
     }
     fun sendErrorsToFlask(userid:String,answers:List<String>,onResult: (String) -> Unit) {
@@ -397,9 +396,9 @@ fun Question13(onNextScreen: () -> Unit){
             }//END OF MIDDLE BOX
             Box(
                 modifier = Modifier
-                    .align(Alignment.BottomEnd) // Position at Bottom Right of the Blur Box
-                    .padding(end = 10.dp, bottom = 10.dp) // Add spacing from the edges
-                    .background(Color(0xFF27B51A), RoundedCornerShape(15.dp)) // Green bg
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 10.dp, bottom = 10.dp)
+                    .background(Color(0xFF27B51A), RoundedCornerShape(15.dp))
                     .clickable {
                         val currentUser = FirebaseAuth.getInstance().currentUser
                         if (currentUser != null) {
@@ -410,7 +409,7 @@ fun Question13(onNextScreen: () -> Unit){
                             onNextScreen()
                         }
                     }
-                    .padding(horizontal = 20.dp, vertical = 5.dp) // Padding inside the button
+                    .padding(horizontal = 20.dp, vertical = 5.dp)
             ) {
                 Text(
                     text = "Next",
@@ -443,7 +442,6 @@ fun Question13(onNextScreen: () -> Unit){
                         .background(color = Color(0x4FFFFFFF))
 
                 ) {
-                    // --- SPEECH BUBBLE (Center Right) ---
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -465,7 +463,6 @@ fun Question13(onNextScreen: () -> Unit){
                             )
                         )
                     }
-                    // --- DORAEMON (Bottom Left) ---
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(R.drawable.doraemon)
@@ -489,7 +486,6 @@ fun Question13(onNextScreen: () -> Unit){
     } //END OF PAGE BOX
 }
 
-//REPEATING CIRCLE FUNCTION INSTEAD OF MULTIPLE BOXES ADDING FUNCTION TO PASS CIRCLE TEXT
 @Composable
 private fun OptionCircle(
     text: String,

@@ -93,7 +93,6 @@ fun Question11(onNextScreen: () -> Unit){
     val speaker_boolean = remember { mutableStateOf(false) }
     val part_boolean= remember { mutableStateOf(false) }
 
-    //BACKEND HANDLER VARIABLES
     val temp_store=remember { mutableStateListOf<String>() }
 
 
@@ -109,7 +108,6 @@ fun Question11(onNextScreen: () -> Unit){
             }
             .build()
     }
-    //SENDING ERRORS TO FLASK VIA TEMP STORE VARIABLE
     val question_number="11"
     fun sendErrorsToFlask(userid:String,answers:List<String>,onResult: (String) -> Unit) {
         val answersJsonString = JSONArray(answers).toString()
@@ -189,7 +187,6 @@ fun Question11(onNextScreen: () -> Unit){
 
 
 
-    //DISPLAY-----------------------
     Box(
         modifier=Modifier.fillMaxSize(),
     ){
@@ -390,7 +387,6 @@ fun Question11(onNextScreen: () -> Unit){
                         .background(color = Color(0x4FFFFFFF))
 
                 ) {
-                    // --- SPEECH BUBBLE (Center Right) ---
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -412,7 +408,6 @@ fun Question11(onNextScreen: () -> Unit){
                             )
                         )
                     }
-                    // --- DORAEMON (Bottom Left) ---
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(R.drawable.doraemon)
